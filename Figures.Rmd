@@ -59,12 +59,7 @@ image(Tmean_historic_m,zlim=c(-10,30),  col = rev(RColorBrewer::brewer.pal(9, "R
 plot(USA_map,add=T)
 
 image(Tmean_m,zlim=c(-11,30),  col = rev(RColorBrewer::brewer.pal(9, "RdYlBu")),  xlab = 'Longitude', ylab = 'Latitude', main = 'B) [1951-2000]',breaks=c(-11,-5,0,5,10,15,20,25,30,100))
-plot(USA_map,add=T)Show in New WindowClear OutputExpand/Collapse Output
-readShapeSpatial is deprecated; use rgdal::readOGR or sf::st_readreadShapePoly is deprecated; use rgdal::readOGR or sf::st_read
-Modify Chunk OptionsRun Current ChunkModify Chunk OptionsRun All Chunks AboveRun Current ChunkModify Chunk OptionsRun All Chunks AboveRun Current ChunkModify Chunk OptionsRun All Chunks AboveRun Current ChunkModify Chunk OptionsRun All Chunks AboveRun Current ChunkModify Chunk OptionsRun All Chunks AboveRun Current ChunkModify Chunk OptionsRun All Chunks AboveRun Current ChunkModify Chunk OptionsRun All Chunks AboveRun Current ChunkModify Chunk OptionsRun All Chunks AboveRun Current ChunkModify Chunk OptionsRun All Chunks AboveRun Current Chunk
-Show in New WindowClear OutputExpand/Collapse Output
- Show Traceback
-Error in readChar(con, 5L, useBytes = TRUE) : cannot open the connection
+plot(USA_map,add=T)
 
 TT_annual_S4_R=rotate(TT_annual_S4)
 image(mask(TT_annual_S4_R,USA_map),zlim=c(-11,30),  col = rev(RColorBrewer::brewer.pal(9, "RdYlBu")),  xlab = 'Longitude', ylab = 'Latitude', main = 'C)   [2080-2010]',breaks=c(-11,-5,0,5,10,15,20,25,30,100))
