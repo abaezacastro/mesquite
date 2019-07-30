@@ -152,7 +152,7 @@ Avance_mesquite_USA=Avance_mesquite_USA[which(Avance_mesquite_USA$var1.pred.1>0)
 
 Figure 3
 ```{r,cache=TRUE}
-load("prosopis_glandulosa_GLM_H_outputs")#glm_hist_outputs T50
+load("/data/prosopis_glandulosa_GLM_H_outputs")#glm_hist_outputs T50
 load("prosopis_glandulosa_BIOCLIM_H_outputs")#bioclim_hist_outputs
 load("prosopis_glandulosa_GAM_H_outputs") #gam_hist_outputs
 
