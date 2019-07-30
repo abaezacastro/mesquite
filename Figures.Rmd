@@ -30,18 +30,18 @@ require(raster)
 #load climate variables
 
 
-load("mean_annual_temperature_1950-2000_predictor1_object")
+load("data/mean_annual_temperature_1950-2000_predictor1_object")
 Tmean_m=Tmean_m/10
 
-load("Total_annual_rainfall_1950-2000_predictor2_object") #PPT_m
+load("data/Total_annual_rainfall_1950-2000_predictor2_object") #PPT_m
 
-load("mean_annual_temperature_1900-1950_predictor1_object")
+load("data/mean_annual_temperature_1900-1950_predictor1_object")
 Tmean_historic_m=Tmean_historic_m/10
-load("annual_total_rainfall_raster_historico")#PPT_m_H
+load("data/annual_total_rainfall_raster_historico")#PPT_m_H
 total_annual_rainfall_h=PPT_m_H
 
 #load climate scenarios from "future_scenarios.Rmd"
-load("Climate_Scenario_4")
+load("data/Climate_Scenario_4")
 TT_annual_S4<-scanario_4[[1]]
 RR_annual_S4<-scanario_4[[2]]
 #create R2
@@ -95,8 +95,8 @@ dev.off()
 Figure 1: past and current precence of _P. glandulosa_
 
 ```{r}
-load("Prosopis_glandulosa_presence_data")#presence data
-load("c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/PresencesNotUsed_obj")#presences_NotUsed
+load("data/Prosopis_glandulosa_presence_data")#presence data
+load("data/PresencesNotUsed_obj")#presences_NotUsed
 
 llmespg_H<-cbind(mesquite_pg_clean$lon[which(mesquite_pg_clean$year<1950)], mesquite_pg_clean$lat[which(mesquite_pg_clean$year<1950)])
 presvals_pg_H<-as.data.frame(extract(predictors, llmespg_H))
@@ -152,20 +152,20 @@ Avance_mesquite_USA=Avance_mesquite_USA[which(Avance_mesquite_USA$var1.pred.1>0)
 
 Figure 3
 ```{r,cache=TRUE}
-load("/data/prosopis_glandulosa_GLM_H_outputs")#glm_hist_outputs T50
-load("prosopis_glandulosa_BIOCLIM_H_outputs")#bioclim_hist_outputs
-load("prosopis_glandulosa_GAM_H_outputs") #gam_hist_outputs
+load("data/prosopis_glandulosa_GLM_H_outputs")#glm_hist_outputs T50
+load("data/prosopis_glandulosa_BIOCLIM_H_outputs")#bioclim_hist_outputs
+load("data/prosopis_glandulosa_GAM_H_outputs") #gam_hist_outputs
 
 
-load("prosopis_glandulosa_GLM_C_outputs") # glm_current_outputs
-load("prosopis_glandulosa_BIOCLIM_C_outputs") # bioclim_curr_outputs
-load("prosopis_glandulosa_GAM_C_outputs") #gam_curr_outputs
+load("data/prosopis_glandulosa_GLM_C_outputs") # glm_current_outputs
+load("data/prosopis_glandulosa_BIOCLIM_C_outputs") # bioclim_curr_outputs
+load("data/prosopis_glandulosa_GAM_C_outputs") #gam_curr_outputs
 
 
 #future
-load("GLM_scenario_85")#GLM_F  P2100
-load("BIOCLIM_scenario_85")#BIOCLIM_F P2100
-load("GAM_F_scenario_85")#GAM_F  P2100
+load("data/GLM_scenario_85")#GLM_F  P2100
+load("data/BIOCLIM_scenario_85")#BIOCLIM_F P2100
+load("data/GAM_F_scenario_85")#GAM_F  P2100
 
 
 png(filename = "Figure3.png",width = 30,height = 10,units = "cm",res = 300)
