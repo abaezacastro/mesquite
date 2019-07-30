@@ -1,0 +1,106 @@
+---
+title: "Turing_prediction"
+author: "Andres Baeza"
+date: "July 5, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+#Read USA map
+```{r}
+#require(USAboundaries)
+
+USA_map_full<-maptools::readShapeSpatial("C:/Users/abaezaca/Dropbox (ASU)/Design Principles in CIS/maps_USA/tl_2017_us_state/tl_2017_us_state")
+top = 49.3457868 # north lat
+left = -124.7844079 # west long
+right = -66.9513812 # east long
+bottom =  24.7433195 # south lat
+USA_map<-raster::crop(USA_map_full,raster::extent(left,right,bottom,top))
+USA_map@data$NAME<-factor(USA_map@data$NAME)
+```
+
+
+```{r,cache=TRUE}
+load("prosopis_glandulosa_GLM_H_outputs")#glm_hist_outputs
+load("prosopis_glandulosa_BIOCLIM_H_outputs")#bioclim_hist_outputs
+load("prosopis_glandulosa_GAM_H_outputs") #gam_hist_outputs
+
+#read  current climate data
+#load climate scenarios from "future_scenarios.Rmd"
+load("Climate_Scenario_4") #read scenarios 8.5 ppm CO2 emissions
+TT_annual_S4<-scanario_4[[1]]
+RR_annual_S4<-scanario_4[[2]]
+
+require(raster)
+#temperature   
+Tmean_m=TT_annual_S4
+#rainfall
+PPT_m=RR_annual_S4
+#new variable R^2
+multiple_rainfall=RR_annual_S4^2
+
+```
+
+```{r}
+predictors_turing_S4<-stack(Tmean_m,PPT_m,multiple_rainfall)
+names(predictors_turing_S4)<-c("mean_annual_temperature_h","total_annual_rainfall_h","multiple_rainfall_h")
+```
+
+```{r}
+p_pg_glm_turing<-predict(object=glm_hist_outputs[[1]],newdata=as.data.frame(predictors_turing_S4),family="binomial")
+nn_S4<-raster(x = predictors_turing_S4)
+nn_F_S4<-setValues(x = nn_S4,values = p_pg_glm_turing)
+nn_F_S4[nn_F_S4 < 0] <- 0
+nn_F_S4[nn_F_S4 > 1] <- 1
+nn_turing_glm<-nn_F_S4
+rm(nn_F_S4)
+
+p_pg_gam_turing<-gam::predict.Gam(object = gam_hist_outputs[[1]],newdata=as.data.frame(predictors_turing_S4))
+nn_S4<-raster(x = predictors_turing_S4)
+nn_F_S4<-setValues(x = nn_S4,values = p_pg_gam_turing)
+nn_F_S4[nn_F_S4 < 0] <- 0
+nn_F_S4[nn_F_S4 > 1] <- 1
+nn_turing_gam<-nn_F_S4
+rm(nn_F_S4)
+
+p_bioclim_turing<-dismo::predict(bioclim_hist_outputs[[1]],predictors_turing_S4)
+p_bioclim_turing[p_bioclim_turing < 0] <- 0
+p_bioclim_turing[p_bioclim_turing > 1] <- 1
+```
+
+
+plots
+```{r}
+
+png(filename = "TuringFutureMesquitePrediction_futureScenario.png",width = 18,height = 6,units = "cm",res = 300)
+par(mfrow=c(1,3))
+GLM_T_raster=nn_turing_glm>glm_hist_outputs[[3]]@t[which.max(glm_hist_outputs[[3]]@TPR+glm_hist_outputs[[3]]@TNR)]
+crs(USA_map)<-crs(GLM_T_raster)
+
+image(GLM_T_raster,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="Long.",main="GLM past; future climate")
+plot(USA_map,add=T)
+
+GAM_T_raster=nn_turing_gam>gam_hist_outputs[[3]]@t[which.max(gam_hist_outputs[[3]]@TPR+gam_hist_outputs[[3]]@TNR)]
+
+image(GAM_T_raster,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="Long.",main="GAM past; future climate")
+plot(USA_map,add=T)
+
+
+BIOCLIM_T_raster=p_bioclim_turing>bioclim_hist_outputs[[3]]@t[which.max(bioclim_hist_outputs[[3]]@TPR+bioclim_hist_outputs[[3]]@TNR)]
+
+image(BIOCLIM_T_raster,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="long.",main="BIOCLIM past; future climate")
+plot(USA_map,add=T)
+
+dev.off()
+
+Turing_Scenarios_FC=stack(GLM_T_raster,GAM_T_raster,BIOCLIM_T_raster)
+save(Turing_Scenarios_FC,file = "Turing_scenariosFutureClimate")
+
+```
+
