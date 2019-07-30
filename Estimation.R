@@ -116,3 +116,6 @@ plot(dist_m4>eval_m4@t[which.max(eval_m4@TPR+eval_m4@TNR)],col=c("grey","red"),m
 plot(USA_map,add=T)
 
 dev.off()
+
+
+
