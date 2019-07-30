@@ -1,0 +1,186 @@
+---
+title: "historical_rainfall_data"
+author: "Andres Baeza"
+date: "March 29, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+
+```{r}
+#require(USAboundaries)
+
+USA_map_full<-maptools::readShapeSpatial("C:/Users/abaezaca/Dropbox (ASU)/Design Principles in CIS/maps_USA/tl_2017_us_state/tl_2017_us_state")
+top = 49.3457868 # north lat
+left = -124.7844079 # west long
+right = -66.9513812 # east long
+bottom =  24.7433195 # south lat
+USA_map<-raster::crop(USA_map_full,raster::extent(left,right,bottom,top))
+USA_map@data$NAME<-factor(USA_map@data$NAME)
+#read road data
+```
+
+
+Different ways of getting historical rainfall and temperature data for the USA
+```{r}
+#from https://www.ncdc.noaa.gov/
+A<-as.data.frame(read.delim(file = "c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Modeling2/Historical_data/ushcn2014_raw_prcp.txt",header = F))
+B<-as.character(A$V1)
+
+substring(B[1],first = 1,last = 10)
+as.numeric(substring(B[1],first = 13,last = 16))
+as.numeric(substring(B[1],first = 17,last = 22))
+as.numeric(substring(B[1],first = 23,last = 2))
+
+length((strsplit(B[1],split = "* ",useBytes=T))[[1]])
+length(as.vector(strsplit(B[2],split = "* ",useBytes=T))[[1]])
+
+
+A<-readLines("c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Modeling2/Historical_data/ushcn2014_raw_prcp.txt")
+
+# extract station ids from the data
+idData <- substr(A, 1, 10)
+years <- substr(A, 13, 16)
+# create a new data frame, with ids as the first column of the frame
+newData <- data.frame(idData, A, stringsAsFactors = FALSE)
+
+eachLine=1
+yrVar <- as.numeric(substr(A[eachLine], 13, 16))
+    moVar <- as.numeric(substr(A[eachLine], 17, 18))
+    metVar <- substr(A[eachLine], 19, 22)
+
+require("rnoaa")
+
+
+stations <- ghcnd_stations()
+S_dat<-unique(data.frame(subset(stations,latitude > bottom & latitude < top & longitude > left & longitude <right & first_year<=1900 & last_year>1951 & element =="PRCP")))
+plot(USA_map)
+points(S_dat$longitude,S_dat$latitude)
+```
+
+
+Obtain information from 1900-1950
+```{r}
+for( i in 939:length(S_dat$id)){
+
+    R1=tryCatch(      meteo_tidy_ghcnd(stationid = S_dat$id[i],date_min = "1900-01-01",date_max = "1950-01-01",var = "prcp")
+, 
+                         error = function(e) paste("something wrong here"))
+  if (class(R1)[1] == class("something wrong here")){
+  }
+    else{
+      
+df <- data.frame(date = R1$date,
+                 year = as.numeric(format(R1$date, format = "%Y")),
+                 month = as.numeric(format(R1$date, format = "%m")),
+                 day = as.numeric(format(R1$date, format = "%d")))
+
+    cb<-cbind(R1$prcp,df)
+ 
+    tp=  tapply(cb$prcp,list(cb$month),mean,na.rm=T)
+
+if(i==939){  
+     precip<-data.frame(cbind(Lat=rep(S_dat$latitude[i],12),long=rep(S_dat$longitude[i],12),tp,month=c(1:12)))
+}
+  else
+  {
+    precip<-rbind(precip,cbind(Lat=rep(S_dat$latitude[i],12),long=rep(S_dat$longitude[i],12),tp,month=c(1:12)))
+  }
+    save(precip,file = "monlthy_precipitation_By_station_obj_2")
+  }
+print(i)
+
+} 
+```  
+
+#get stations to obtain max temperature
+```{r}
+stations <- ghcnd_stations()
+S_dat<-unique(data.frame(subset(stations,latitude > bottom & latitude < top & longitude > left & longitude <right & first_year<=1900 & last_year>1951 & element =="TMAX")))
+plot(USA_map)
+points(S_dat$longitude,S_dat$latitude)
+``` 
+
+Obtain max temperature from 1900-1950
+```{r}
+for( i in 730:length(S_dat$id)){
+
+    T1=tryCatch(      meteo_tidy_ghcnd(stationid = S_dat$id[i],date_min = "1900-01-01",date_max = "1950-01-01",var = "TMAX")
+, 
+                         error = function(e) paste("something wrong here"))
+  if (class(T1)[1] == class("something wrong here")){
+  }
+    else{
+      
+df <- data.frame(date = T1$date,
+                 year = as.numeric(format(T1$date, format = "%Y")),
+                 month = as.numeric(format(T1$date, format = "%m")),
+                 day = as.numeric(format(T1$date, format = "%d")))
+
+    cb<-cbind(T1$tmax,df)
+ 
+    tp=  tapply(cb$tmax,list(cb$month),mean,na.rm=T)
+
+if(i==730){  
+     Tmax<-data.frame(cbind(Lat=rep(S_dat$latitude[i],12),long=rep(S_dat$longitude[i],12),tp,month=c(1:12)))
+}
+  else
+  {
+    Tmax<-rbind(Tmax,cbind(Lat=rep(S_dat$latitude[i],12),long=rep(S_dat$longitude[i],12),tp,month=c(1:12)))
+  }
+    save(Tmax,file = "monlthy_Tmax_By_station_obj2")
+  }
+print(i)
+
+} 
+```  
+
+#get stations to obtain min temperature
+```{r}
+stations <- ghcnd_stations()
+S_dat<-unique(data.frame(subset(stations,latitude > bottom & latitude < top & longitude > left & longitude <right & first_year<=1900 & last_year>1951 & element =="TMIN")))
+plot(USA_map)
+points(S_dat$longitude,S_dat$latitude)
+``` 
+
+Obtain min temperature from 1900-1950
+```{r}
+for( i in 1669:length(S_dat$id)){
+
+    T1=tryCatch(      meteo_tidy_ghcnd(stationid = S_dat$id[i],date_min = "1900-01-01",date_max = "1950-01-01",var = "TMIN")
+, 
+                         error = function(e) paste("something wrong here"))
+  if (class(T1)[1] == class("something wrong here")){
+  }
+    else{
+      if (is.vector(T1$tmin)){
+df <- data.frame(date = T1$date,
+                 year = as.numeric(format(T1$date, format = "%Y")),
+                 month = as.numeric(format(T1$date, format = "%m")),
+                 day = as.numeric(format(T1$date, format = "%d")))
+
+    cb<-cbind(T1$tmin,df)
+ 
+    tp=  tapply(cb$tmin,list(cb$month),mean,na.rm=T)
+
+if(i==1669){  
+     Tmin<-data.frame(cbind(Lat=rep(S_dat$latitude[i],12),long=rep(S_dat$longitude[i],12),tp,month=c(1:12)))
+}
+  else
+  {
+    Tmin<-rbind(Tmin,cbind(Lat=rep(S_dat$latitude[i],12),long=rep(S_dat$longitude[i],12),tp,month=c(1:12)))
+  }
+    save(Tmin,file = "monthly_Tmin_By_station_obj5")
+      }
+}
+print(i)
+
+} 
+```  
+

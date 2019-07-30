@@ -1,0 +1,261 @@
+---
+title: "temperature and rainfall data 1951-2000"
+author: "Andres Baeza"
+date: "March 29, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+
+```{r}
+#require(USAboundaries)
+
+USA_map_full<-maptools::readShapeSpatial("C:/Users/abaezaca/Dropbox (ASU)/Design Principles in CIS/maps_USA/tl_2017_us_state/tl_2017_us_state")
+top = 49.3457868 # north lat
+left = -124.7844079 # west long
+right = -66.9513812 # east long
+bottom =  24.7433195 # south lat
+USA_map<-raster::crop(USA_map_full,raster::extent(left,right,bottom,top))
+USA_map@data$NAME<-factor(USA_map@data$NAME)
+#read road data
+```
+
+
+```{r}
+
+require("rnoaa")
+
+
+stations <- ghcnd_stations()
+S_dat<-unique(data.frame(subset(stations,latitude > bottom & latitude < top & longitude > left & longitude <right & first_year<=1951 & last_year>2000 & element =="PRCP")))
+plot(USA_map)
+points(S_dat$longitude,S_dat$latitude)
+```
+
+
+Obtain precipitation data from 1950-2000
+```{r}
+for( i in 1171:length(S_dat$id)){
+
+    R1=tryCatch(      meteo_tidy_ghcnd(stationid = S_dat$id[i],date_min = "1951-01-01",date_max = "2001-01-01",var = "prcp")
+, 
+                         error = function(e) paste("something wrong here"))
+  if (class(R1)[1] == class("something wrong here")){
+  }
+    else{
+      if (dim(R1)[2]==3){
+      
+              df <- data.frame(date = R1$date,
+                 year = as.numeric(format(R1$date, format = "%Y")),
+                 month = as.numeric(format(R1$date, format = "%m")),
+                 day = as.numeric(format(R1$date, format = "%d")))
+
+    cb<-cbind(R1$prcp,df)
+ 
+    tp=  tapply(cb$prcp,list(cb$month),mean,na.rm=T)
+
+    if(i==1171){  
+     precip<-data.frame(cbind(Lat=rep(S_dat$latitude[i],12),long=rep(S_dat$longitude[i],12),tp,month=c(1:12)))
+  }
+    else
+  {
+    precip<-rbind(precip,cbind(Lat=rep(S_dat$latitude[i],12),long=rep(S_dat$longitude[i],12),tp,month=c(1:12)))
+    }
+    save(precip,file = "monlthy_precipitation_1950_2000_By_station_objG")
+    print(i)
+   }
+  }
+
+
+} 
+```  
+
+#get stations to obtain max temperature
+```{r}
+stations <- ghcnd_stations()
+S_dat<-unique(data.frame(subset(stations,latitude > bottom & latitude < top & longitude > left & longitude <right & first_year<=1951 & last_year>2000 & (element =="TMAX" | element =="TMIN"))))
+plot(USA_map)
+points(S_dat$longitude,S_dat$latitude)
+``` 
+
+Obtain max temperature from 1900-1950
+```{r}
+for( i in 1:length(S_dat$id)){
+
+    T1=tryCatch(      meteo_tidy_ghcnd(stationid = S_dat$id[i],date_min = "1951-01-01",date_max = "2001-01-01",var = "TMAX")
+, 
+                         error = function(e) paste("something wrong here"))
+  if (class(T1)[1] == class("something wrong here")){
+  }
+    else{
+      
+df <- data.frame(date = T1$date,
+                 year = as.numeric(format(T1$date, format = "%Y")),
+                 month = as.numeric(format(T1$date, format = "%m")),
+                 day = as.numeric(format(T1$date, format = "%d")))
+
+    cb<-cbind(T1$tmax,df)
+ 
+    tp=  tapply(cb$tmax,list(cb$month),mean,na.rm=T)
+
+if(i==1){  
+     Tmax<-data.frame(cbind(Lat=rep(S_dat$latitude[i],12),long=rep(S_dat$longitude[i],12),tp,month=c(1:12)))
+}
+  else
+  {
+    Tmax<-rbind(Tmax,cbind(Lat=rep(S_dat$latitude[i],12),long=rep(S_dat$longitude[i],12),tp,month=c(1:12)))
+  }
+    save(Tmax,file = "monlthy_Tmax_1950-2000_By_station_obj")
+  }
+print(i)
+
+} 
+```  
+
+#get stations to obtain min and max temperature 1900-1950
+```{r}
+stations <- ghcnd_stations()
+S_dat<-unique(data.frame(subset(stations,latitude > bottom & latitude < top & longitude > left & longitude <right & first_year<=1900 & last_year>1951 & (element =="TMAX" | element =="TMIN"))))
+plot(USA_map)
+points(S_dat$longitude,S_dat$latitude)
+``` 
+
+
+Obtain mean temperature from 1900-1950
+```{r}
+for( i in 1:length(S_dat$id)){
+
+    T1=tryCatch(      meteo_tidy_ghcnd(stationid = S_dat$id[i],date_min = "1900-01-01",date_max = "1951-01-01",var = c("TMAX","TMIN"))
+, 
+                         error = function(e) paste("something wrong here"))
+  if (class(T1)[1] == class("something wrong here")){
+  
+    } else{
+      if (is.vector(T1$tmin) & is.vector(T1$tmax)){
+                df <- data.frame(date = T1$date,
+                 year = as.numeric(format(T1$date, format = "%Y")),
+                 month = as.numeric(format(T1$date, format = "%m")),
+                 day = as.numeric(format(T1$date, format = "%d")))
+
+                  cb<-cbind((T1$tmin+T1$tmax)/2,df)
+ colnames(cb)[1]<-"tmean"
+            tp=  tapply(cb$tmean,list(cb$month),mean,na.rm=T)
+
+      if(i==1){  
+          Tmean<-data.frame(cbind(Lat=rep(S_dat$latitude[i],12),long=rep(S_dat$longitude[i],12),tmean=tp,month=c(1:12)))
+        }
+        else
+        {
+          Tmean<-rbind(Tmean,cbind(Lat=rep(S_dat$latitude[i],12),long=rep(S_dat$longitude[i],12),tmean=tp,month=c(1:12)))
+        }
+          
+        save(Tmean,file = "monthly_Tmean_1900_1950_By_station_obj")
+      }
+    }
+    
+    
+print(i/length(S_dat$id))
+
+} 
+```  
+
+
+#get stations to obtain min temperature 1950-2000
+```{r}
+stations <- ghcnd_stations()
+S_dat<-unique(data.frame(subset(stations,latitude > bottom & latitude < top & longitude > left & longitude <right & first_year<=1951 & last_year>2000 & element =="TMIN")))
+plot(USA_map)
+points(S_dat$longitude,S_dat$latitude)
+``` 
+
+Obtain mean temperature from 1950-2000 using (tmin and tmax)/2
+```{r}
+for( i in 1:length(S_dat$id)){
+
+    T1=tryCatch(      meteo_tidy_ghcnd(stationid = S_dat$id[i],date_min = "1950-01-01",date_max = "2001-01-01",var = c("TMAX","TMIN"))
+, 
+                         error = function(e) paste("something wrong here"))
+  if (class(T1)[1] == class("something wrong here")){
+  
+    } else{
+      if (is.vector(T1$tmin) & is.vector(T1$tmax)){
+                df <- data.frame(date = T1$date,
+                 year = as.numeric(format(T1$date, format = "%Y")),
+                 month = as.numeric(format(T1$date, format = "%m")),
+                 day = as.numeric(format(T1$date, format = "%d")))
+
+                  cb<-cbind((T1$tmin+T1$tmax)/2,df)
+ colnames(cb)[1]<-"tmean"
+            tp=  tapply(cb$tmean,list(cb$month),mean,na.rm=T)
+
+      if(i==1){  
+          Tmean<-data.frame(cbind(Lat=rep(S_dat$latitude[i],12),long=rep(S_dat$longitude[i],12),tmean=tp,month=c(1:12)))
+        }
+        else
+        {
+          Tmean<-rbind(Tmean,cbind(Lat=rep(S_dat$latitude[i],12),long=rep(S_dat$longitude[i],12),tmean=tp,month=c(1:12)))
+        }
+          
+        save(Tmean,file = "monthly_Tmean_1950_2000_By_station_obj")
+      }
+    }
+    
+    
+print(i/length(S_dat$id))
+
+} 
+```  
+
+
+
+
+Obtain min temperature from 1950-2000
+```{r}
+for( i in 2925:length(S_dat$id)){
+
+    T1=tryCatch(meteo_tidy_ghcnd(stationid = S_dat$id[i],
+                                 date_min = "1950-01-01",
+                                 date_max = "2001-01-01",
+                                 var = "TMIN"), 
+   error = function(e) paste("something wrong here"))
+  if (class(T1)[1] == class("something wrong here")){
+    } else{
+      if (is.vector(T1$tmin[,1])){
+                df <- data.frame(date = T1$date,
+                                 year = as.numeric(format(T1$date, format = "%Y")),
+                                 month = as.numeric(format(T1$date, format = "%m")),
+                                 day = as.numeric(format(T1$date, format = "%d")))
+
+                cb<-cbind(T1$tmin,df)
+     colnames(cb)[1]<-"tmin"
+            tp=  tapply(cb$tmin,list(cb$month),mean,na.rm=T)
+
+      if(i==1){  
+          Tmin<-data.frame(cbind(Lat=rep(S_dat$latitude[i],12),
+                                  long=rep(S_dat$longitude[i],12),
+                                  tmin=tp,
+                                  month=c(1:12)))
+        }
+        else
+        {
+          Tmin<-rbind(Tmin,cbind(Lat=rep(S_dat$latitude[i],12),
+                                  long=rep(S_dat$longitude[i],12),
+                                  tmin=tp,
+                                  month=c(1:12)))
+        }
+          
+        save(Tmin,file = "monthly_Tmin_1950_2000_By_station_objB")
+      }
+    }
+    
+    
+print(i/length(S_dat$id))
+
+} 
+```  
