@@ -24,410 +24,170 @@ USA_map@data$NAME<-factor(USA_map@data$NAME)
 ```
 
 
-Figure 2: past present and future climate 
-```{r,cache=TRUE}
-require(raster)
-#load climate variables
-
-
-load("data/mean_annual_temperature_1950-2000_predictor1_object")
-Tmean_m=Tmean_m/10
-
-load("data/Total_annual_rainfall_1950-2000_predictor2_object") #PPT_m
-
-load("data/mean_annual_temperature_1900-1950_predictor1_object")
-Tmean_historic_m=Tmean_historic_m/10
-load("data/annual_total_rainfall_raster_historico")#PPT_m_H
-total_annual_rainfall_h=PPT_m_H
-
-#load climate scenarios from "future_scenarios.Rmd"
-load("data/Climate_Scenario_4")
-TT_annual_S4<-scanario_4[[1]]
-RR_annual_S4<-scanario_4[[2]]
-#create R2
-multiple_rainfall=PPT_m^2
-#stack predictors
-predictors<-stack(Tmean_m,
-                  PPT_m,multiple_rainfall)
-############################################################################
-#figure 1
-png(filename = "PastPresentandFutureClimate.png",width = 22,height = 12,units = "cm",res = 300)
-
-par(mfrow=c(2,3))
-#Temperature
-image(Tmean_historic_m,zlim=c(-10,30),  col = rev(RColorBrewer::brewer.pal(9, "RdYlBu")),  xlab = 'Longitude', ylab = 'Latitude', main = 'A)  Ave. daily Temp. [1900-1950]',breaks=c(-11,-5,0,5,10,15,20,25,30,100))
-plot(USA_map,add=T)
-
-image(Tmean_m,zlim=c(-11,30),  col = rev(RColorBrewer::brewer.pal(9, "RdYlBu")),  xlab = 'Longitude', ylab = 'Latitude', main = 'B) [1951-2000]',breaks=c(-11,-5,0,5,10,15,20,25,30,100))
-plot(USA_map,add=T)
-
-TT_annual_S4_R=rotate(TT_annual_S4)
-image(mask(TT_annual_S4_R,USA_map),zlim=c(-11,30),  col = rev(RColorBrewer::brewer.pal(9, "RdYlBu")),  xlab = 'Longitude', ylab = 'Latitude', main = 'C)   [2080-2010]',breaks=c(-11,-5,0,5,10,15,20,25,30,100))
-plot(USA_map,add=T)
-
-
-#precipitation
-image(PPT_m_H,zlim=c(0,16),  col = RColorBrewer::brewer.pal(9, "YlGn"),  xlab = 'Longitude', ylab = 'Latitude', main = 'D)  Ave. daily Rainfall [1900-1950]',breaks=c(0,2,4,6,8,10,12,14,16,100))
-plot(USA_map,add=T)
-
-image(PPT_m,zlim=c(0,16),  col = RColorBrewer::brewer.pal(9, "YlGn"),  xlab = 'Longitude', ylab = 'Latitude', main = 'E)  [1950-2000]',breaks=c(0,2,4,6,8,10,12,14,16,100))
-plot(USA_map,add=T)
-
-RR_annual_S4_R=rotate(RR_annual_S4)
-image(mask(RR_annual_S4_R,USA_map),zlim=c(0,16),  col = RColorBrewer::brewer.pal(9, "YlGn"),  xlab = 'Longitude', ylab = 'Latitude', main = 'F) 2080-2100',breaks=c(0,2,4,6,8,10,12,14,16,100))
-plot(USA_map,add=T)
-
-dev.off()
-
-
-#scale
-png(filename = "Scale_Climate.png",width = 10,height = 10,units = "cm",res = 300)
-colfunc_R<-RColorBrewer::brewer.pal(9, "YlGn")
-colfunc_T<-rev(RColorBrewer::brewer.pal(9, "RdYlBu"))
-plot(rep(1,9),col=colfunc_R, pch=15,cex=4,bty="n",axes=F,ylab="",xlab="")
-points(rep(1.2,9),col=colfunc_T, pch=15,cex=4)
-text(x=1:9,y=rep(0.85,9),labels=c(0,2,4,6,8,10,12,14,"16<"),cex=0.8)
-text(x=1:9,y=rep(1.3,9),labels=c(-11,-5,0,5,10,15,20,25,"30<"),cex=0.8)
-dev.off()
-```
-
-
 Figure 1: past and current precence of _P. glandulosa_
 
 ```{r}
 load("data/Prosopis_glandulosa_presence_data")#presence data
 load("data/PresencesNotUsed_obj")#presences_NotUsed
+require(raster)
+#load climate variables
+predictors_past <- get_past_climate()
+predictors_present <- get_current_climate()
+predictors_future <- get_future_climate()
+
+predictors_future <- resample(predictors_future,predictors_present)
+############################################################################
 
 llmespg_H<-cbind(mesquite_pg_clean$lon[which(mesquite_pg_clean$year<1950)], mesquite_pg_clean$lat[which(mesquite_pg_clean$year<1950)])
-presvals_pg_H<-as.data.frame(extract(predictors, llmespg_H))
+presvals_pg_H<-as.data.frame(raster::extract(predictors_past, llmespg_H))
 
-presences_NotUsed_H=llmespg_H[-which(presvals_pg_H$var1.pred.1>0),]
-llmespg_H=llmespg_H[which(presvals_pg_H$var1.pred.1>0),]
+presences_NotUsed_H=llmespg_H[-which(presvals_pg_H$mean_annual_temperature>0),]
+llmespg_H=llmespg_H[which(presvals_pg_H$mean_annual_temperature>0),]
 
 llmespg_C<-cbind(mesquite_pg_clean$lon[which(mesquite_pg_clean$year>1950)], mesquite_pg_clean$lat[which(mesquite_pg_clean$year>1950)])
 
-presvals_pg_C<-as.data.frame(extract(predictors, llmespg_C))
-llmespg_C=llmespg_C[which(presvals_pg_C$var1.pred.1>0),]
+presvals_pg_C<-as.data.frame(raster::extract(predictors_past, llmespg_C))
+llmespg_C=llmespg_C[which(presvals_pg_C$mean_annual_temperature>0),]
 
 
 
 #llmespg_C<-llmespg_C[,-which(llmespg_C[,2]<0)]
 #llmespg_H<-llmespg_H[,-which(llmespg_H[,2]<0)]
 
-png(filename = "Presence_data_FigurePaper.png",width = 18,height = 10,units = "cm",res = 300)
+png(filename = "output_maps/figure1.png",width = 26,height = 8,units = "cm",res = 300)
 
-par(mfrow=c(1,2),mar=c(1,2,1,2))
+par(mfrow=c(1,2),mar=c(4,4,3,3))
 
-maps::map("usa",fill = T,col="grey")
-box(which = "plot")
-points(llmespg_H[,1],llmespg_H[,2],col=RColorBrewer::brewer.pal(9, "BrBG")[9],pch=20,cex=0.1)
-
-legend(x=-120,y=48,legend = "Before 1950",col = "grey",bty = "n",pch =20,cex=0.6)
-
-
-maps::map("usa",fill = T,col="grey")
-box(which = "plot")
-points(llmespg_C[,1],llmespg_C[,2],col=RColorBrewer::brewer.pal(9, "BrBG")[9],pch=20,cex=0.1)
+#maps::map("usa",fill = T,col="grey")
+#box(which = "plot")
+image(predictors_past[[2]],zlim=c(-17,30),  col ="white",  xlab = 'Longitude', ylab = 'Latitude',main="a. Presences before 1950")
+plot(USA_map,add=T)
+points(llmespg_H[,1],llmespg_H[,2],col="darkorchid4",pch=20,cex=0.1)
+#legend(x=-120,y=54,legend = "a. Presences before 1950",col = "white",bty = "n",pch =20,cex=0.6)
 
 
-legend(x=-120,y=48,legend = "After 1950",col = "grey",bty = "n",pch =20,cex=0.6)
+#maps::map("usa",fill = T,col="grey")
+#box(which = "plot")
+image(predictors_past[[2]],zlim=c(-17,30),  col ="white",  xlab = 'Longitude', ylab = '',main="b. Presences after 1950")
+plot(USA_map,add=T)
+points(llmespg_C[,1],llmespg_C[,2],col="darkorchid4",pch=20,cex=0.1)
+
+#legend(x=-120,y=54,legend = "b. Presences after 1950",col = "white",bty = "n",pch =20,cex=0.6)
 
 dev.off()
 
-#############plot presences outside usa####################
-maps::map("usa",fill = T,col="grey")
-box(which = "plot")
-points(presences_NotUsed[,1],presences_NotUsed[,2],col=RColorBrewer::brewer.pal(9, "YlOrRd")[9],pch=20,cex=0.2)
-points(presences_NotUsed_H[,1],presences_NotUsed_H[,2],col=RColorBrewer::brewer.pal(9, "YlOrRd")[9],pch=20,cex=0.2)
-
-############
-Avance_mesquite<-as.data.frame(cbind(mesquite_pg_clean$lon, mesquite_pg_clean$lat))
-
-
-Avance_mesquite_USA<-as.data.frame(extract(predictors,Avance_mesquite))
-Avance_mesquite_USA=Avance_mesquite_USA[which(Avance_mesquite_USA$var1.pred.1>0),]
 
 ```
+
+
+
+Figure 2: past present and future climate 
+```{r,cache=TRUE}
+#figure 1
+png(filename = "output_maps/figure2.png",width = 30,height = 22,units = "cm",res = 300)
+
+par(mfrow=c(3,3))
+#Temperature
+image(predictors_past[[1]],zlim=c(-11,30),  col = rev(RColorBrewer::brewer.pal(9, "RdYlBu")),  xlab = 'Longitude', ylab = 'Latitude', main = 'a.  Ave. daily Temp. [1900-1950]',breaks=c(-11,-5,0,5,10,15,20,25,30,100))
+plot(USA_map,add=T)
+
+image(mask(predictors_present[[1]],USA_map),zlim=c(-11,30),  col = rev(RColorBrewer::brewer.pal(9, "RdYlBu")),  xlab = 'Longitude', ylab = 'Latitude', main = 'b. [1951-2000]',breaks=c(-11,-5,0,5,10,15,20,25,30,100))
+plot(USA_map,add=T)
+
+image(mask(predictors_future[[1]],USA_map),zlim=c(-11,30),  col = rev(RColorBrewer::brewer.pal(9, "RdYlBu")),  xlab = 'Longitude', ylab = 'Latitude', main = 'c.   [2080-2010]',breaks=c(-11,-5,0,5,10,15,20,25,30,100))
+plot(USA_map,add=T)
+
+
+image(predictors_past[[2]],zlim=c(-17,30),  col = rev(RColorBrewer::brewer.pal(9, "RdYlBu")),  xlab = 'Longitude', ylab = 'Latitude', main = 'd.  Min. daily Temp. [1900-1950]',breaks=c(-17,-5,0,5,10,15,20,25,30,100))
+plot(USA_map,add=T)
+
+image(mask(predictors_present[[2]],USA_map),zlim=c(-17,30),  col = rev(RColorBrewer::brewer.pal(9, "RdYlBu")),  xlab = 'Longitude', ylab = 'Latitude', main = 'e. [1951-2000]',breaks=c(-17,-5,0,5,10,15,20,25,30,100))
+plot(USA_map,add=T)
+
+image(mask(predictors_future[[2]],USA_map),zlim=c(-17,30),  col = rev(RColorBrewer::brewer.pal(9, "RdYlBu")),  xlab = 'Longitude', ylab = 'Latitude', main = 'f.  [2080-2010]',breaks=c(-17,-5,0,5,10,15,20,25,30,100))
+plot(USA_map,add=T)
+
+
+#precipitation
+image(predictors_past[[3]],zlim=c(0,16),  col = RColorBrewer::brewer.pal(9, "YlGn"),  xlab = 'Longitude', ylab = 'Latitude', main = 'g. Ave. daily Rainfall [1900-1950]',breaks=c(0,1,2,3,4,5,6,7,20,100))
+plot(USA_map,add=T)
+
+image(mask(predictors_present[[3]],USA_map),zlim=c(0,16),  col = RColorBrewer::brewer.pal(9, "YlGn"),  xlab = 'Longitude', ylab = 'Latitude', main = 'h.  [1950-2000]',breaks=c(0,1,2,3,4,5,6,7,20,100))
+plot(USA_map,add=T)
+
+image(mask(predictors_future[[3]],USA_map),zlim=c(0,16),  col = RColorBrewer::brewer.pal(9, "YlGn"),  xlab = 'Longitude', ylab = 'Latitude', main = 'i. 2080-2100',breaks=c(0,1,2,3,4,5,6,7,20,100))
+plot(USA_map,add=T)
+
+dev.off()
+
+```
+
+
 
 
 Figure 3
-```{r,cache=TRUE}
-load("data/prosopis_glandulosa_GLM_H_outputs")#glm_hist_outputs T50
-load("data/prosopis_glandulosa_BIOCLIM_H_outputs")#bioclim_hist_outputs
-load("data/prosopis_glandulosa_GAM_H_outputs") #gam_hist_outputs
+```{R}
 
+maps_present<-estimation_present()
 
-load("data/prosopis_glandulosa_GLM_C_outputs") # glm_current_outputs
-load("data/prosopis_glandulosa_BIOCLIM_C_outputs") # bioclim_curr_outputs
-load("data/prosopis_glandulosa_GAM_C_outputs") #gam_curr_outputs
+maps_past<-estimation_past()
 
 
-#future
-load("data/GLM_scenario_85")#GLM_F  P2100
-load("data/BIOCLIM_scenario_85")#BIOCLIM_F P2100
-load("data/GAM_F_scenario_85")#GAM_F  P2100
-
-
-png(filename = "Figure3.png",width = 30,height = 10,units = "cm",res = 300)
-par(mfrow=c(1,3))
-image(glm_hist_outputs[[4]]>glm_hist_outputs[[3]]@t[which.max(glm_hist_outputs[[3]]@TPR+glm_hist_outputs[[3]]@TNR)],col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="Long.",main="Past")
-plot(USA_map,add=T)
-
-image(glm_current_outputs[[4]]>glm_current_outputs[[3]]@t[which.max(glm_current_outputs[[3]]@TPR+glm_current_outputs[[3]]@TNR)],col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="Long.",main="Present")
-plot(USA_map,add=T)
-
-GLM_F_tmp=GLM_F[[2]]
-GLM_C=glm_current_outputs[[4]]
-GLM_F_tmp<-rotate(GLM_F_tmp)
-crs(GLM_C)<-crs(GLM_F_tmp)
-GLM_Fcr<-crop(GLM_F_tmp,GLM_C)
-
-
-image(GLM_Fcr>glm_current_outputs[[3]]@t[which.max(glm_current_outputs[[3]]@TPR+glm_current_outputs[[3]]@TNR)],col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="Long.",main="Future")
-plot(USA_map,add=T)
-
-dev.off()
-
-png(filename = "PastPresentFuture.png",width = 22,height = 20,units = "cm",res = 300)
-par(mfrow=c(3,3))
-
-
-#row 1)
-image(glm_hist_outputs[[4]]>glm_hist_outputs[[3]]@t[which.max(glm_hist_outputs[[3]]@TPR+glm_hist_outputs[[3]]@TNR)],col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="Long.",main="Past")
-plot(USA_map,add=T)
-
-image(glm_current_outputs[[4]]>glm_current_outputs[[3]]@t[which.max(glm_current_outputs[[3]]@TPR+glm_current_outputs[[3]]@TNR)],col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="Long.",main="Present")
-plot(USA_map,add=T)
-
-#image(GLM_F[[2]]>glm_current_outputs[[3]]@t[which.max(glm_current_outputs[[3]]@TPR+glm_current_outputs[[3]]@TNR)],col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="Long.",main="Future")
-#plot(USA_map,add=T)
-
-
-GLM_F_tmp=GLM_F[[2]] #P2010
-GLM_C=glm_current_outputs[[4]]
-GLM_F_tmp<-rotate(GLM_F_tmp)
-crs(GLM_C)<-crs(GLM_F_tmp)
-GLM_Fcr<-crop(GLM_F_tmp,GLM_C)
-
-
-image(GLM_Fcr>glm_current_outputs[[3]]@t[which.max(glm_current_outputs[[3]]@TPR+glm_current_outputs[[3]]@TNR)],col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="Long.",main="Future")
-plot(USA_map,add=T)
-
-
-#row 2) GAM
-image(gam_hist_outputs[[4]]>gam_hist_outputs[[3]]@t[which.max(gam_hist_outputs[[3]]@TPR+gam_hist_outputs[[3]]@TNR)],col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="long.")
-plot(USA_map,add=T)
-
-image(gam_curr_outputs[[4]]>gam_curr_outputs[[3]]@t[which.max(gam_curr_outputs[[3]]@TPR+gam_curr_outputs[[3]]@TNR)],col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="long.")
-plot(USA_map,add=T)
-
-#image(GAM_F[[2]]>gam_curr_outputs[[3]]@t[which.max(glm_current_outputs[[3]]@TPR+glm_current_outputs[[3]]@TNR)],col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="long.")
-#plot(USA_map,add=T)
-
-GAM_F_tmp=GAM_F[[2]]
-
-GAM_C=gam_curr_outputs[[4]]
-GAM_F_tmp<-rotate(GAM_F_tmp)
-crs(GAM_C)<-crs(GAM_F_tmp)
-GAM_Fcr<-crop(GAM_F_tmp,GAM_C)
-
-
-image(GAM_Fcr>gam_curr_outputs[[3]]@t[which.max(gam_curr_outputs[[3]]@TPR+gam_curr_outputs[[3]]@TNR)],col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="long.")
-plot(USA_map,add=T)
-
-
-
-#row 3)
-image(bioclim_hist_outputs[[2]]>bioclim_hist_outputs[[3]]@t[which.max(bioclim_hist_outputs[[3]]@TPR+bioclim_hist_outputs[[3]]@TNR)],col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="long.")
-plot(USA_map,add=T)
-
-image(bioclim_curr_outputs[[2]]>bioclim_curr_outputs[[3]]@t[which.max(bioclim_curr_outputs[[3]]@TPR+bioclim_curr_outputs[[3]]@TNR)],col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="long.")
-plot(USA_map,add=T)
-
-#image(BIOCLIM_F[[1]]>bioclim_curr_outputs[[3]]@t[which.max(bioclim_curr_outputs[[3]]@TPR+bioclim_curr_outputs[[3]]@TNR)],col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="long.")
-bioclim_F_tmp=BIOCLIM_F[[1]]
-
-bioclim_C=bioclim_curr_outputs[[2]]
-bioclim_F_tmp<-rotate(bioclim_F_tmp)
-crs(bioclim_C)<-crs(bioclim_F_tmp)
-bioclim_Fcr<-crop(bioclim_F_tmp,bioclim_C)
-
-
-image(bioclim_Fcr>bioclim_curr_outputs[[3]]@t[which.max(bioclim_curr_outputs[[3]]@TPR+bioclim_curr_outputs[[3]]@TNR)],col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="long.")
-plot(USA_map,add=T)
-
-dev.off()
-
-rm(gam_hist_outputs)
-rm(gam_curr_outputs)
-rm(bioclim_hist_outputs)
-rm(bioclim_curr_outputs)
-rm(GAM_C)
-rm(GAM_F_tmp)
-rm(bioclim_C)
-rm(bioclim_F_tmp)
-
-```
-
-
-Figure 4
-Panel 1 Diff modelo_H clima_H (T50) vs modelo C clima C T2000 - T50 
-Panel 2 diff Modelo_C clima_C vs. modelo C Clima F T2000 - P2100
-Panel 3 Diff Modelo_H clima F vs 
-
-```{r}
-Diff_HC<-(glm_hist_outputs[[4]]>glm_hist_outputs[[3]]@t[which.max(glm_hist_outputs[[3]]@TPR+glm_hist_outputs[[3]]@TNR)])-(glm_current_outputs[[4]]>glm_current_outputs[[3]]@t[which.max(glm_current_outputs[[3]]@TPR+glm_current_outputs[[3]]@TNR)])
-
-
-GLM_C=glm_current_outputs[[4]]
-GLM_F_tmp=GLM_F[[2]]
-
-GLM_F_tmp<-rotate(GLM_F_tmp)
-crs(GLM_C)<-crs(GLM_F_tmp)
-GLM_Fcr<-crop(GLM_F_tmp,GLM_C)
-
-GLM_C_v2=projectRaster(from = GLM_C,to = GLM_Fcr)
-
-B1=(GLM_C_v2>glm_current_outputs[[3]]@t[which.max(glm_current_outputs[[3]]@TPR+glm_current_outputs[[3]]@TNR)])
-B2=GLM_Fcr>glm_current_outputs[[3]]@t[which.max(glm_current_outputs[[3]]@TPR+glm_current_outputs[[3]]@TNR)]
-
-Diff_CF=(B1-B2)
-
-
-###########################figure
-png(filename = "Expansion.png",width = 22,height = 10,units = "cm",res = 300)
-
-par(mfrow=c(1,2))
-image(Diff_HC,col=c("magenta4","grey","grey"),ylab="Lat.",xlab="Long.",main="Expansion from pass to present")
-plot(USA_map,add=T)
-#legend("topright",legend = c("Expansion from pass to present","no differences"),pch = 15,fill = T,col = c("magenta4","grey"))
-
-
-image(as.factor(Diff_CF)==-1,col=c("grey","yellow"),ylab="Lat.",xlab="Long.",main="Expansion from present to future")
-plot(USA_map,add=T)
-
-dev.off()
-
-
-```
-Differences in past and present GLM predictions
-
-
-Figure 5
-```{r,cache=TRUE}
-
-load("prosopis_glandulosa_GLM_H_outputs")#glm_hist_outputs T50
-T50=glm_hist_outputs[[4]]>glm_hist_outputs[[3]]@t[which.max(glm_hist_outputs[[3]]@TPR+glm_hist_outputs[[3]]@TNR)]
-rm(glm_hist_outputs)
-
-crs(T50) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0" 
-
-
-load("Turing_scenarios2000")#Turing_Scenarios T2000
-T2000=Turing_Scenarios[[1]]
-rm(Turing_Scenarios)
-crs(T2000) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0" 
-
-
-load("Turing_scenariosFutureClimate")#Turing_Scenarios future climate T2100
-T2100=Turing_Scenarios_FC[[1]]
-rm(Turing_Scenarios_FC)
-
-
-crs(T2100) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0" 
-
-
-
-T2100 %>%
-  disaggregate(fact=res(T2100)/res(T50))%>%
-#T2100_Disagre=resample(T50,T2100)
-rotate()%>%
-#crs(P2000)<-crs(T2100)
-
-projectRaster(to = T50)%>%
-
-crop(T50)-> T2100_F
-
-#####################P2100####################
-
-load("prosopis_glandulosa_GLM_C_outputs") # glm_current_outputs P2000
-P2000=glm_current_outputs[[4]]>glm_current_outputs[[3]]@t[which.max(glm_current_outputs[[3]]@TPR+glm_current_outputs[[3]]@TNR)]
-crs(P2000) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0" 
-
-P2000%>%
-disaggregate(fact=res(P2000)/res(T50))%>%
-
-#P2000=rotate(P2000_Disagre)
-crop(T50>(-0.1))->P2000_F
-
-#P2000=projectRaster(from = P2000,to = T50)
-
-
-
-load("GLM_scenario_85")  #P2100
-P2100=GLM_F[[2]]>glm_current_outputs[[3]]@t[which.max(glm_current_outputs[[3]]@TPR+glm_current_outputs[[3]]@TNR)]
-rm(GLM_F)
-rm(glm_current_outputs)
-crs(P2100) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0" 
-
-P2100%>%
-disaggregate(fact=res(P2100)/res(T50))%>%
-
-rotate()%>%
-
-projectRaster(to = T50)%>%
-
-crop(T50>(-0.1))-> P2100_F
-
-
-######################################################
-#Figure##########################################
-###################################################
-
-png(filename = "Figure3_V2.png",width = 60,height = 30,units = "cm",res = 200)
+maps_present=resample(maps_present,maps_past)
+png(filename = "output_maps/Figure3.png",width = 60,height = 30,units = "cm",res = 200)
 par(mfrow=c(2,3),cex=1.2)
 
-image(T50,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="Long.",main="A)     T50")
+image(maps_past[[1]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="a.     P50")
 plot(USA_map,add=T)
 
-image(T2000,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="Long.",main="B)     T2000")
+image(maps_past[[2]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="b.     P2000")
 plot(USA_map,add=T)
 
-image(mask(T2100_F,USA_map),col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="Long.",main="C)     T2100")
+image(maps_past[[3]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="c.     P2100")
 plot(USA_map,add=T)
 
-image(P2000_F,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="Long.",main="D)     P2000")
+image(maps_present[[1]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="d.     R2000")
 plot(USA_map,add=T)
 
-image(P2000_F,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="Long.",main="D)     P2000")
+image(maps_present[[1]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="d.     R2000")
 plot(USA_map,add=T)
 
-image(mask(P2100_F,USA_map),col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Lat.",xlab="Long.",main="E)     P2100")
+image(maps_present[[2]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="e.     R2100")
 plot(USA_map,add=T)
 
 dev.off()
 ##Raster operations
 
-Diff_T50T2000=T2000-T50 #current expansion due to climate
+```
 
-Diff_P2000T2000=(P2000_F - T2000)  # P2000- T2000 current expasion due to Land-use change
 
-DiffP2000_T50= P2000_F - T50   #total current expansion
+Figure 4
+```{r,cache=TRUE}
+
+######################################################
+#Figure##########################################
+###################################################
+
+
+Diff_T50T2000=(maps_past[[2]]>0.5)-(maps_past[[1]]>0.5) #current expansion due to climate
+Diff_P2000T2000=(maps_present[[1]]>0.5) - (maps_past[[2]]>0.5)  # P2000- T2000 current expasion due to Land-use change
+
+DiffP2000_T50= (maps_present[[1]]>0.5) - (maps_past[[1]]>0.5) #P2000_F - T50   #total current expansion
 
 
 #Diff_T50T2100=(T2100>0)-T50 #future expansion due to climate
-Diff_T2100P2000=(T2100_F>0)-P2000_F #future expansion due to climate
+Diff_T2100P2000=(maps_past[[3]]>0.5) - (maps_present[[1]]>0.5) #(T2100_F>0)-P2000_F #future expansion due to climate
 
 
-DiffP2100_T2100=mask((P2100_F-(T2100_F>0)),USA_map) #future expansion due to LU #Note: use mask() function ro remove areas outside USA
+DiffP2100_T2100=(maps_present[[2]]>0.5) - (maps_past[[3]]>0.5)#mask((P2100_F-(T2100_F>0)),USA_map) #future expansion due to LU #Note: use mask() function ro remove areas outside USA
 
 #DiffP2100_T50=P2100 - T50 #Total expansion due to climate and LU
 
-DiffP2100_P2000=P2100_F - P2000_F #Total expansion due to climate and LU
+DiffP2100_P2000=(maps_present[[2]]>0.5) - (maps_present[[1]]>0.5)#P2100_F - P2000_F #Total expansion due to climate and LU
 
 
 
-png(filename = "Drivers_of_expansion_D.png",width = 60,height = 30,units = "cm",res = 200)
+png(filename = "output_maps/figure4.png",width = 60,height = 30,units = "cm",res = 200)
 par(mfrow=c(2,3),cex=1.2)
 
 image(Diff_T50T2000>0.5,col=c("grey","darkgreen"),ylab="Lat.",xlab="Long.",main="A)   Current [C]")
@@ -442,7 +202,7 @@ plot(USA_map,add=T)
 image(Diff_T2100P2000>0.5,col=c("grey","darkgreen"),ylab="Lat.",xlab="Long.",main="D)   Future [C]")
 plot(USA_map,add=T)
 
-image(DiffP2100_T2100,col=c("grey","yellow"),ylab="Lat.",xlab="Long.",main="E)   Future [LU]")
+image(DiffP2100_T2100>0.5,col=c("grey","yellow"),ylab="Lat.",xlab="Long.",main="E)   Future [LU]")
 plot(USA_map,add=T)
 
 image(DiffP2100_P2000>0.5,col=c("grey","red"),ylab="Lat.",xlab="Long.",main="F)   Future [C + LU]")
@@ -456,17 +216,17 @@ dev.off()
 ####extract area by state and create a csv value file
 ```{r,cache=TRUE}
 A=area(Diff_T50T2000)
-Current_expansion_climate_area= extract((A*(Diff_T50T2000>0)),USA_map,fun=sum)
+Current_expansion_climate_area= raster::extract((A*(Diff_T50T2000>0)),USA_map,fun=sum)
 
-Current_expansion_LU_area= extract((A*(Diff_P2000T2000>0)),USA_map,fun=sum)
+Current_expansion_LU_area= raster::extract((A*(Diff_P2000T2000>0)),USA_map,fun=sum)
 
-Current_expansion_LU_C_area= extract((A*(DiffP2000_T50>0)),USA_map,fun=sum)
+Current_expansion_LU_C_area= raster::extract((A*(DiffP2000_T50>0)),USA_map,fun=sum)
 
-Future_expansion_climate_area= extract((A*(Diff_T2100P2000>0)),USA_map,fun=sum)
+Future_expansion_climate_area= raster::extract((A*(Diff_T2100P2000>0)),USA_map,fun=sum)
 
-Future_expansion_LU_area= extract((A*(DiffP2100_T2100>0)),USA_map,fun=sum)
+Future_expansion_LU_area= raster::extract((A*(DiffP2100_T2100>0)),USA_map,fun=sum)
 
-Future_expansion_LU_C_area= extract((A*(DiffP2100_P2000>0)),USA_map,fun=sum)
+Future_expansion_LU_C_area= raster::extract((A*(DiffP2100_P2000>0)),USA_map,fun=sum)
 
 
 area_perState=cbind(Current_expansion_climate_area,

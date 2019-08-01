@@ -3,5 +3,6 @@ require(MASS)
 require(ncdf4)
 require(magrittr)
 
-source("Estimation.R")
-source("Estimation_past.R")
+maps_present<-estimation_present()
+
+maps_past<-estimation_past()

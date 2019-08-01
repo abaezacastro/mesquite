@@ -1,44 +1,15 @@
-metodo="GLM"
-load("data/raster_Tmean_historic")
-load("data/annual_total_rainfall_raster_historico")
-load("data/raster_Tmin_historic")
-multiple_rainfall=PPT_m_H*PPT_m_H
-##########################################################################
-#re-clasification
-m <- c(-1, 0, NA,  0.1, 5000, 1)
-rclmat <- matrix(m, ncol=3, byrow=TRUE)
-rm(m)
-
-rc <- reclassify(PPT_m_H, rclmat)
-
-
-total_annual_rainfall=PPT_m_H*rc
-raster_Tmean_annual_H=raster_Tmean_annual_H*rc
-multiple_rainfall=multiple_rainfall*rc
-raster_Tmin_annual_H=raster_Tmin_annual_H*rc
+estimation_past <- function(estimation_method ="GLM"){
+metodo=estimation_method
 ##########################################################################
 load("data/Prosopis_glandulosa_presence_data")
 ##########################################################################
-
+predictors_past <- get_past_climate()
 ##########################################################################
-predictors_past<-stack(raster_Tmean_annual_H,
-                  raster_Tmin_annual_H,
-                  total_annual_rainfall,
-                  multiple_rainfall
-                  )
-
-
-rm(raster_Tmean_annual_H)
-rm(raster_Tmin_annual_H)
-rm(PPT_m_H)
-rm(multiple_rainfall)
-rm(total_annual_rainfall)
 
 llmespg<-cbind(mesquite_pg_clean$lon[which(mesquite_pg_clean$year<=1950)], mesquite_pg_clean$lat[which(mesquite_pg_clean$year<=1950)])
 llmespg<-llmespg[,-which(llmespg[,2]<0)]
 presvals_pg<-as.data.frame(raster::extract(predictors_past, llmespg))
 names(presvals_pg)<-c("mean_annual_temperature","min_annual_temperature","total_annual_rainfall","multiple_rainfall")
-names(predictors_past)<-names(presvals_pg)
 
 ##########################################################################
 
@@ -105,42 +76,46 @@ USA_map@data$NAME<-factor(USA_map@data$NAME)
 dist=mask(dist,USA_map)
 
 eval<-dismo::evaluate(p=llmespg[-traning,],a=backgr,model = model,x=predictors_past)
+######################################################################
+#get climate current and future scenario
+predictors_current <- get_current_climate()
+predictors_future <- get_future_climate()
+#####################################################################3
 
-
-#source("future_scenarios.R")
-nn_future<-raster(x = predictors_future)
+nn_future <- raster(x = predictors_future)
 
   T50 <- dist>eval@t[which.max(eval@TPR+eval@TNR)]
   m2_predict_T2000 <- predict(object = model,newdata=as.data.frame(predictors_current))
   dist_T2000 <- setValues(x = nn,values = m2_predict_T2000)
+  dist_T2000 <- mask(dist_T2000,USA_map)
   T2000 <- dist_T2000>eval@t[which.max(eval@TPR+eval@TNR)]
   
   m2_predict_T2100 <- predict(object = model,newdata=as.data.frame(predictors_future))
   dist_T2100 <- setValues(x = nn_future,values = m2_predict_T2100)
   dist_T2100 <- mask(dist_T2100,USA_map)
-  T2100<-dist_T2100>eval@t[which.max(eval@TPR+eval@TNR)]
+  T2100 <- dist_T2100 > eval@t[which.max(eval@TPR+eval@TNR)]
 
   
   
   T2000%>%
-    disaggregate(fact=res(T2000)/res(T50))->T2000
+    disaggregate(fact=res(predictors_future)/res(predictors_current)) -> T2000
   crs(T2000) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84"
   
   T50 %>% crop(T2000) -> T50
   crs(T50) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84"
   
   T2000 <- resample(T2000,T50)
-  plot(T2000 - T50 > 0.5)
-  
+
   
   T2100%>%
-    disaggregate(fact=res(T2100)/res(T50))->T2100
+    disaggregate(fact=res(predictors_future)/res(predictors_current)) -> T2100
   crs(T2100) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84"
   
   T2100 <- resample(T2100,T50)
-  plot(T2100- T50 > 0.5)
-  
-  rm(sdmdata_pg)
+
+  return(stack(T50,T2000, T2100))
+ 
+   rm(sdmdata_pg)
   rm(presvals_pg)
   rm(valid_points)
   rm(llmespg)
@@ -155,15 +130,16 @@ nn_future<-raster(x = predictors_future)
   rm(backgr)
   rm(traning_point)
   rm(model_predict)
-  rm(rclmat)
   rm(model)
-  rm(rclmat)
   rm(USA_map_full)
   rm(pg)
   rm(traning)
-  rm(rc)
   rm(mesquite_pg_clean)
   rm(absvals)
+  
+
+  
+}
 ###############################################################################3
 # png(filename = "output_maps/comparison_withTmin_past.png",width = 20,height = 30,res=300,units = "cm")
 # par(mfrow=c(3,2))
