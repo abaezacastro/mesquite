@@ -1,8 +1,4 @@
 
-
-require(ncdf4)
-require(raster)
-require(magrittr)
 R_fp_r <- stack("c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Modeling2/future_scenarios/Stats_pr.nc",varname="pr_pm")
                 
 T_fp_r <- stack("c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Modeling2/future_scenarios/Stats_tas.nc",varname="tas_pm")
