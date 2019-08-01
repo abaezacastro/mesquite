@@ -23,15 +23,9 @@ library(maptools)
 
 Rainfall Interpolation historic
 ```{r}
-load('monlthy_precipitation_By_station_obj')
-precip2=precip
-load('monlthy_precipitation_By_station_obj_2')
-precip2=rbind(precip2,precip)
-precip2=unique(precip2)
-
 
 USA_map_full<-maptools::readShapeSpatial("C:/Users/abaezaca/Dropbox (ASU)/Design Principles in CIS/maps_USA/tl_2017_us_state/tl_2017_us_state")
-load("PTT_stack_obj")
+load("c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/PTT_stack_obj")
 
 left=extent(PTT_stack)[1]
 right=extent(PTT_stack)[2]
@@ -45,48 +39,12 @@ x.range <- as.numeric(c(left, right))  # min/max longitude of the interpolation 
 y.range <- as.numeric(c(bottom, top))  # min/max latitude of the interpolation area
 grd <- expand.grid(x = seq(from = x.range[1], to = x.range[2], length.out =  PTT_stack@ncols), y = seq(from = y.range[1], 
     to = y.range[2], length.out = PTT_stack@nrows))  # expand points to grid
-coordinates(precip2) = ~long + Lat
+
 coordinates(grd) <- ~x + y
+
 gridded(grd) <- TRUE
 
-idw_j<-gstat::idw(tp~1,locations=subset(precip2,month==1),newdata=grd)
-idw_j<-raster(idw_j)
-idw_f<-gstat::idw(tp~1,locations=subset(precip2,month==2),newdata=grd)
-idw_f<-raster(idw_f)
-idw_m<-gstat::idw(tp~1,locations=subset(precip2,month==3),newdata=grd)
-idw_m<-raster(idw_m)
-idw_a<-gstat::idw(tp~1,locations=subset(precip2,month==4),newdata=grd)
-idw_a<-raster(idw_a)
-idw_ma<-gstat::idw(tp~1,locations=subset(precip2,month==5),newdata=grd)
-idw_ma<-raster(idw_ma)
-idw_ju<-gstat::idw(tp~1,locations=subset(precip2,month==6),newdata=grd)
-idw_ju<-raster(idw_ju)
-idw_jl<-gstat::idw(tp~1,locations=subset(precip2,month==7),newdata=grd)
-idw_jl<-raster(idw_jl)
-idw_au<-gstat::idw(tp~1,locations=subset(precip2,month==8),newdata=grd)
-idw_au<-raster(idw_au)
-idw_s<-gstat::idw(tp~1,locations=subset(precip2,month==9),newdata=grd)
-idw_s<-raster(idw_s)
-idw_o<-gstat::idw(tp~1,locations=subset(precip2,month==10),newdata=grd)
-idw_o<-raster(idw_o)
-idw_n<-gstat::idw(tp~1,locations=subset(precip2,month==11),newdata=grd)
-idw_n<-raster(idw_n)
-idw_d<-gstat::idw(tp~1,locations=subset(precip2,month==12),newdata=grd)
-idw_d<-raster(idw_d)
-stack_PPT_histor=stack(idw_j,
-                       idw_f,
-                       idw_m,
-                       idw_a,
-                       idw_ma,
-                       idw_ju,
-                       idw_jl,
-                       idw_au,
-                       idw_s,
-                       idw_o,
-                       idw_n,
-                       idw_d
-                       )
-save(stack_PPT_histor,file="stack_PPT_historico")
+
 ##############################################################
 #Rainfall Interpolation current
 load("monlthy_precipitation_1950_2000_By_station_obj")
@@ -112,193 +70,78 @@ pp2<-aggregate( tp  ~ station, data=precip3, FUN=sum,simplify=F)
 pp3=as.data.frame(cbind(subset(precip2,month==1)$long,subset(precip2,month==1)$Lat,as.vector(unlist(pp2$tp))))
 colnames(pp3)=c("long","Lat","tp")
 
-USA_map_full<-maptools::readShapeSpatial("C:/Users/abaezaca/Dropbox (ASU)/Design Principles in CIS/maps_USA/tl_2017_us_state/tl_2017_us_state")
-load("PTT_stack_obj")
-
-left=extent(PTT_stack)[1]
-right=extent(PTT_stack)[2]
-top=extent(PTT_stack)[4]
-bottom=extent(PTT_stack)[3]
-
-USA_map<-raster::crop(USA_map_full,raster::extent(left,right,bottom,top))
-USA_map@data$NAME<-factor(USA_map@data$NAME)
-
-x.range <- as.numeric(c(left, right))  # min/max longitude of the interpolation area
-y.range <- as.numeric(c(bottom, top))  # min/max latitude of the interpolation area
-grd <- expand.grid(x = seq(from = x.range[1], to = x.range[2], length.out =  PTT_stack@ncols), y = seq(from = y.range[1], 
-    to = y.range[2], length.out = PTT_stack@nrows))  # expand points to grid
+######################################################################
 coordinates(pp3) = ~long + Lat
-coordinates(grd) <- ~x + y
-gridded(grd) <- TRUE
-
-
 idw_annualPPT<-gstat::idw(tp ~ 1,locations=pp3,newdata=grd)
 raster_annualPPT<-raster(idw_annualPPT)/10
 save(raster_annualPPT,file="annual_total_rainfall_raster_current")
 
-idw_j<-raster(idw_annualPPT)
+#######################################################################
+#historic precipitation
+load('monlthy_precipitation_By_station_obj')
+precip2=precip
+load('monlthy_precipitation_By_station_obj_2')
+precip2=rbind(precip2,precip)
+precip2=unique(precip2)
 
-idw_j<-gstat::idw(tp~1,locations=subset(precip2,month==1),newdata=grd)
-idw_j<-raster(idw_j)
-idw_f<-gstat::idw(tp~1,locations=subset(precip2,month==2),newdata=grd)
-idw_f<-raster(idw_f)
-idw_m<-gstat::idw(tp~1,locations=subset(precip2,month==3),newdata=grd)
-idw_m<-raster(idw_m)
-idw_a<-gstat::idw(tp~1,locations=subset(precip2,month==4),newdata=grd)
-idw_a<-raster(idw_a)
-idw_ma<-gstat::idw(tp~1,locations=subset(precip2,month==5),newdata=grd)
-idw_ma<-raster(idw_ma)
-idw_ju<-gstat::idw(tp~1,locations=subset(precip2,month==6),newdata=grd)
-idw_ju<-raster(idw_ju)
-idw_jl<-gstat::idw(tp~1,locations=subset(precip2,month==7),newdata=grd)
-idw_jl<-raster(idw_jl)
-idw_au<-gstat::idw(tp~1,locations=subset(precip2,month==8),newdata=grd)
-idw_au<-raster(idw_au)
-idw_s<-gstat::idw(tp~1,locations=subset(precip2,month==9),newdata=grd)
-idw_s<-raster(idw_s)
-idw_o<-gstat::idw(tp~1,locations=subset(precip2,month==10),newdata=grd)
-idw_o<-raster(idw_o)
-idw_n<-gstat::idw(tp~1,locations=subset(precip2,month==11),newdata=grd)
-idw_n<-raster(idw_n)
-idw_d<-gstat::idw(tp~1,locations=subset(precip2,month==12),newdata=grd)
-idw_d<-raster(idw_d)
-stack_PPT=stack(idw_j,
-                       idw_f,
-                       idw_m,
-                       idw_a,
-                       idw_ma,
-                       idw_ju,
-                       idw_jl,
-                       idw_au,
-                       idw_s,
-                       idw_o,
-                       idw_n,
-                       idw_d
-                       )
-save(stack_PPT,file="stack_PPT_current")
+precip3=cbind(precip2,rep(seq(1,dim(precip2)[1]/12,1),each=12))
+colnames(precip3)[5]="station"
+pp2<-aggregate( tp  ~ station, data=precip3, FUN=sum,simplify=F)
+
+
+
+coordinates(precip2) = ~long + Lat
+
+
+
+```
+
+```{R}
 ##############################################################
-
-#Min. Temperature Interpolation
-load('monthly_Tmin_By_station_obj')
+#Min. Temperature Interpolation historic
+load('c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/monthly_Tmin_By_station_obj')
 Tmin_o=Tmin
-load('monthly_Tmin_By_station_obj2')
+rm(Tmin)
+load('c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/monthly_Tmin_By_station_obj2')
 Tmin_o=rbind(Tmin_o,Tmin)
-load('monthly_Tmin_By_station_obj3')
+rm(Tmin)
+load('c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/monthly_Tmin_By_station_obj3')
 Tmin_o=rbind(Tmin_o,Tmin)
-load('monthly_Tmin_By_station_obj4')
+rm(Tmin)
+load('c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/monthly_Tmin_By_station_obj4')
 Tmin_o=rbind(Tmin_o,Tmin)
-load('monthly_Tmin_By_station_obj5')
+rm(Tmin)
+load('c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/monthly_Tmin_By_station_obj5')
 Tmin_o=rbind(Tmin_o,Tmin)
 Tmin_o=unique(Tmin_o)
-coordinates(Tmin_o) = ~long + Lat
-
-idw_j<-gstat::idw(tp~1,locations=subset(Tmin_o,month==1),newdata=grd)
-idw_j <-raster(idw_j)
-idw_f<-gstat::idw(tp~1,locations=subset(Tmin_o,month==2),newdata=grd)
-idw_f <-raster(idw_f)
-idw_m<-gstat::idw(tp~1,locations=subset(Tmin_o,month==3),newdata=grd)
-idw_m <-raster(idw_m)
-idw_a<-gstat::idw(tp~1,locations=subset(Tmin_o,month==4),newdata=grd)
-idw_a <-raster(idw_a)
-idw_ma<-gstat::idw(tp~1,locations=subset(Tmin_o,month==5),newdata=grd)
-idw_ma <-raster(idw_ma)
-idw_ju<-gstat::idw(tp~1,locations=subset(Tmin_o,month==6),newdata=grd)
-idw_ju <-raster(idw_ju)
-idw_jl<-gstat::idw(tp~1,locations=subset(Tmin_o,month==7),newdata=grd)
-idw_jl <-raster(idw_jl)
-idw_au<-gstat::idw(tp~1,locations=subset(Tmin_o,month==8),newdata=grd)
-idw_au <-raster(idw_au)
-idw_s<-gstat::idw(tp~1,locations=subset(Tmin_o,month==9),newdata=grd)
-idw_s <-raster(idw_s)
-idw_o<-gstat::idw(tp~1,locations=subset(Tmin_o,month==10),newdata=grd)
-idw_o <-raster(idw_o)
-idw_n<-gstat::idw(tp~1,locations=subset(Tmin_o,month==11),newdata=grd)
-idw_n <-raster(idw_n)
-idw_d<-gstat::idw(tp~1,locations=subset(Tmin_o,month==12),newdata=grd)
-idw_d <-raster(idw_d)
-stack_Tmin_histor=stack(idw_j,
-                       idw_f,
-                       idw_m,
-                       idw_a,
-                       idw_ma,
-                       idw_ju,
-                       idw_jl,
-                       idw_au,
-                       idw_s,
-                       idw_o,
-                       idw_n,
-                       idw_d
-                       )
-
-save(stack_Tmin_histor,file="stack_Tmin_historico")
-###########################################################################
-#Max. and mean Temperature Interpolation
-#load("monthly_Tmean_1900_1950_By_station_obj")
-load("monthly_Tmean_1950_2000_By_station_obj")
-Tmean2=as.data.frame(cbind(Tmean,rep(seq(1,dim(Tmean)[1]/12,1),each=12)))
-colnames(Tmean2)[5]="station"
+rm(Tmin)
+Tmin2=as.data.frame(cbind(Tmin_o,rep(seq(1,dim(Tmin_o)[1]/12,1),each=12)))
+colnames(Tmin2)[5]="station"
 #Tmean=Tmean[-which(is.na(Tmean$tmean)),]
 
-T2<-aggregate(tmean  ~ station, data=Tmean2,FUN=mean,simplify=F)
+T2<-aggregate(tp  ~ station, data=Tmin2,FUN=mean,simplify=F)
 
 
-T3=as.data.frame(cbind(subset(Tmean,month==1)$long[-length(subset(Tmean,month==1)$long)],subset(Tmean,month==1)$Lat[-length(subset(Tmean,month==1)$Lat)],as.vector(unlist(T2$tmean))))
-colnames(T3)=c("long","Lat","tm")
-
-coordinates(T3)= ~long + Lat
-idw_Tmean_annual<-gstat::idw(tm~1,locations=T3,newdata=grd)
-raster_Tmean_annual=raster(idw_Tmean_annual)
-save(raster_Tmean_annual,file="raster_Tmean_current")
+T3=as.data.frame(cbind(subset(Tmin_o,month==1)$long,
+                    subset(Tmin_o,month==1)$Lat,
+                    as.vector(unlist(T2$tp))/10))
+colnames(T3)=c("long","Lat","tmin")
 
 
-coordinates(Tmean)= ~long + Lat
-idw_j<-gstat::idw(tmean~1,locations=subset(Tmean,month==1),newdata=grd)
-idw_j <-raster(idw_j)
-idw_f<-gstat::idw(tmean~1,locations=subset(Tmean,month==2),newdata=grd)
-idw_f <-raster(idw_f)
-idw_m<-gstat::idw(tmean~1,locations=subset(Tmean,month==3),newdata=grd)
-idw_m <-raster(idw_m)
-idw_a<-gstat::idw(tmean~1,locations=subset(Tmean,month==4),newdata=grd)
-idw_a <-raster(idw_a)
-idw_ma<-gstat::idw(tmean~1,locations=subset(Tmean,month==5),newdata=grd)
-idw_ma <-raster(idw_ma)
-idw_ju<-gstat::idw(tmean~1,locations=subset(Tmean,month==6),newdata=grd)
-idw_ju <-raster(idw_ju)
-idw_jl<-gstat::idw(tmean~1,locations=subset(Tmean,month==7),newdata=grd)
-idw_jl <-raster(idw_jl)
-idw_au<-gstat::idw(tmean~1,locations=subset(Tmean,month==8),newdata=grd)
-idw_au <-raster(idw_au)
-idw_s<-gstat::idw(tmean~1,locations=subset(Tmean,month==9),newdata=grd)
-idw_s <-raster(idw_s)
-idw_o<-gstat::idw(tmean~1,locations=subset(Tmean,month==10),newdata=grd)
-idw_o <-raster(idw_o)
-idw_n<-gstat::idw(tmean~1,locations=subset(Tmean,month==11),newdata=grd)
-idw_n <-raster(idw_n)
-idw_d<-gstat::idw(tmean~1,locations=subset(Tmean,month==12),newdata=grd)
-idw_d <-raster(idw_d)
-stack_Tmean=stack(idw_j,
-                       idw_f,
-                       idw_m,
-                       idw_a,
-                       idw_ma,
-                       idw_ju,
-                       idw_jl,
-                       idw_au,
-                       idw_s,
-                       idw_o,
-                       idw_n,
-                       idw_d
-                       )
 
-#save(stack_Tmax_histor,file="stack_Tmax_historico")
-save(stack_Tmean,file="stack_Tmean_current")
+coordinates(T3) = ~long + Lat
+
+idw_Tmin_annual<-gstat::idw(tmin~1,locations=T3,newdata=grd)
+raster_Tmin_annual_H=raster(idw_Tmin_annual)
+save(raster_Tmin_annual_H,file="data/raster_Tmin_historic")
+
+
 ```
 
 
 
-Interpolation Tmin 1950-2000
-
 ```{R}
+#Interpolation Tmin 1950-2000 current
 load('monthly_Tmin_1950_2000_By_station_objB')
 Tmin2=as.data.frame(cbind(Tmin,rep(seq(1,dim(Tmin)[1]/12,1),each=12)))
 colnames(Tmin2)[5]="station"
@@ -316,3 +159,49 @@ raster_Tmin_annual=raster(idw_Tmin_annual)
 save(raster_Tmin_annual,file="raster_Tmin_current")
 
 ```
+
+```{R}
+###########################################################################
+#mean Temperature Interpolation current
+load("monthly_Tmean_1950_2000_By_station_obj")
+Tmean2=as.data.frame(cbind(Tmean,rep(seq(1,dim(Tmean)[1]/12,1),each=12)))
+colnames(Tmean2)[5]="station"
+#Tmean=Tmean[-which(is.na(Tmean$tmean)),]
+
+T2<-aggregate(tmean  ~ station, data=Tmean2,FUN=mean,simplify=F)
+
+
+T3=as.data.frame(cbind(subset(Tmean,month==1)$long[-length(subset(Tmean,month==1)$long)],subset(Tmean,month==1)$Lat[-length(subset(Tmean,month==1)$Lat)],as.vector(unlist(T2$tmean))))
+colnames(T3)=c("long","Lat","tm")
+
+coordinates(T3)= ~long + Lat
+idw_Tmean_annual<-gstat::idw(tm~1,locations=T3,newdata=grd)
+raster_Tmean_annual=raster(idw_Tmean_annual)
+save(raster_Tmean_annual,file="raster_Tmean_current")
+
+```
+
+
+```{R}
+###########################################################################
+#mean Temperature Interpolation historic
+load("c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/monthly_Tmean_1900_1950_By_station_obj")
+Tmean2=as.data.frame(cbind(Tmean,rep(seq(1,dim(Tmean)[1]/12,1),each=12)))
+colnames(Tmean2)[5]="station"
+#Tmean=Tmean[-which(is.na(Tmean$tmean)),]
+
+T2<-aggregate(tmean  ~ station, data=Tmean2,FUN=mean,simplify=F)
+
+
+T3=as.data.frame(cbind(subset(Tmean,month==1)$long,
+                    subset(Tmean,month==1)$Lat,
+                    as.vector(unlist(T2$tmean))/10))
+colnames(T3)=c("long","Lat","tm")
+
+coordinates(T3)= ~long + Lat
+idw_Tmean_annual<-gstat::idw(tm~1,locations=T3,newdata=grd)
+raster_Tmean_annual_H=raster(idw_Tmean_annual)
+save(raster_Tmean_annual_H,file="data/raster_Tmean_historic")
+
+```
+
