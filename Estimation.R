@@ -1,4 +1,4 @@
-require("raster")
+
 metodo="GLM"
 load("data/raster_Tmean_current")
 load("data/annual_total_rainfall_raster_current")
@@ -17,6 +17,9 @@ total_annual_rainfall=raster_annualPPT*rc
 raster_Tmean_annual=raster_Tmean_annual*rc
 multiple_rainfall=multiple_rainfall*rc
 raster_Tmin_annual=raster_Tmin_annual*rc
+
+rm(m)
+
 ##########################################################################
 load("data/Prosopis_glandulosa_presence_data")
 ##########################################################################
@@ -28,27 +31,19 @@ predictors_current<-stack(raster_Tmean_annual,
                   multiple_rainfall
                   )
 
-predictors_current_wo_tmin<-stack(raster_Tmean_annual,
-                                  total_annual_rainfall,
-                  multiple_rainfall
-)
 
 rm(raster_Tmean_annual)
 rm(raster_Tmin_annual)
 rm(raster_annualPPT)
 rm(multiple_rainfall)
 rm(total_annual_rainfall)
+rm(rc)
 
 llmespg<-cbind(mesquite_pg_clean$lon[which(mesquite_pg_clean$year>1950)], mesquite_pg_clean$lat[which(mesquite_pg_clean$year>1950)])
 llmespg<-llmespg[,-which(llmespg[,2]<0)]
-presvals_pg<-as.data.frame(extract(predictors_current, llmespg))
-presvals_pg_wo_tmin<-as.data.frame(extract(predictors_current_wo_tmin, llmespg))
+presvals_pg<-as.data.frame(raster::extract(predictors_current, llmespg))
 names(presvals_pg)<-c("mean_annual_temperature","min_annual_temperature","total_annual_rainfall","multiple_rainfall")
 names(predictors_current)<-names(presvals_pg)
-
-names(presvals_pg_wo_tmin)<-c("mean_annual_temperature","total_annual_rainfall","multiple_rainfall")
-names(predictors_current_wo_tmin)<-names(presvals_pg_wo_tmin)
-
 
 ##########################################################################
 
@@ -56,7 +51,7 @@ names(predictors_current_wo_tmin)<-names(presvals_pg_wo_tmin)
 #backgr <- dismo::randomPoints(predictors_current, 2000) #if new background values are needed
 #saveRDS(backgr,file = "data/background_points")
 backgr<-readRDS("data/background_points")
-absvals <- as.data.frame(extract(predictors_current, backgr))
+absvals <- as.data.frame(raster::extract(predictors_current, backgr))
 names(absvals)<-names(presvals_pg)
 
 pg <- c(rep(1, nrow(presvals_pg)), rep(0, nrow(absvals)))
@@ -67,19 +62,15 @@ valid_points=which(sdmdata_pg$mean_annual_temperature!="NaN")
 traning<-sample(x = (1:length(sdmdata_pg$mean_annual_temperature))[valid_points],size =round(length(valid_points)/2),replace = F)
 
 traning_point=sdmdata_pg[traning,]
-testing_points=sdmdata_pg[-traning,]
 
-p_training=sdmdata_pg$pg[traning]
+##########################################################################
 
-
-
-require(MASS)
 #Estimations and predictions
 
 if (metodo=="GLM"){
 
 model <- glm(pg ~ mean_annual_temperature+min_annual_temperature+multiple_rainfall+total_annual_rainfall, data=traning_point,na.action = na.omit)
-model_predict=predict(object = m2,newdata=as.data.frame(predictors_current))
+model_predict=predict(object = model,newdata=as.data.frame(predictors_current))
 
 }
 if (metodo=="GAM"){
@@ -97,7 +88,6 @@ if (metodo=="BIOCLIM"){
 valid_points=which(presvals_pg$mean_annual_temperature!="NaN")
 traning<-sample(x = (1:length(presvals_pg$mean_annual_temperature))[valid_points],size =round(length(valid_points)/2),replace = F)
 traning_point=presvals_pg[traning,]
-testing_points=presvals_pg[-traning,]
 
 model<-dismo::bioclim(traning_point)
 model_predict<-predict(m6,predictors_current)
@@ -118,27 +108,56 @@ right = -66.9513812 # east long
 bottom =  24.7433195 # south lat
 USA_map<-crop(USA_map_full,raster::extent(left,right,bottom,top))
 USA_map@data$NAME<-factor(USA_map@data$NAME)
+rm(top)
+rm(left)
+rm(right)
+rm(bottom)
 ##############################################################################################################
 #evaluation
-  dist <- mask(dist_m2,USA_map)
-  eval <- dismo::evaluate(p=llmespg[-traning,],a=backgr,model = m2,x=predictors_current)
+  dist <- mask(dist,USA_map)
+  eval <- dismo::evaluate(p=llmespg[-traning,],a=backgr,model = model,x=predictors_current)
 
 source("future_scenarios.R")
 nn_future<-raster(x = predictors_future)
 
-  P2000 <- dist>eval@t[which.max(eval@TPR+eval_m2@TNR)]
+  P2000 <- dist>eval@t[which.max(eval@TPR+eval@TNR)]
   model_predict_future <- predict(object = model,newdata=as.data.frame(predictors_future))
   dist_future <- setValues(x = nn_future,values = model_predict_future)
   dist_future <-mask(dist_future,USA_map)
   P2100 <- dist_future>eval@t[which.max(eval@TPR+eval@TNR)]
 
+  P2100%>%
+    disaggregate(fact=res(P2100)/res(P2000))->P2100
+  crs(P2100) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84"
+    
+  P2000 %>% crop(P2100) -> P2000
+
+  
+  crs(P2000) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84"
+  
+  P2100 <- resample(P2100,P2000)
+  plot(P2100- P2000 > 0.5)
+
 rm(dist)
 rm(dist_future)
 rm(nn_future)
-
-par(mfrow=c(1,2))
-plot(P2000)
-plot(P2100)
+rm(sdmdata_pg)
+rm(presvals_pg)
+rm(valid_points)
+rm(llmespg)
+rm(nn)
+rm(eval)
+rm(model_predict_future)
+rm(backgr)
+rm(traning_point)
+rm(model_predict)
+rm(absvals)
+rm(mesquite_pg_clean)
+rm(model)
+rm(rclmat)
+rm(USA_map_full)
+rm(pg)
+rm(traning)
 ###############################################################################3
 # png(filename = "output_maps/comparison_withTmin.png",width = 20,height = 30,res=300,units = "cm")
 # par(mfrow=c(3,2))
