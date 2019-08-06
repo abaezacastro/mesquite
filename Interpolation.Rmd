@@ -47,19 +47,19 @@ gridded(grd) <- TRUE
 
 ##############################################################
 #Rainfall Interpolation current
-load("monlthy_precipitation_1950_2000_By_station_obj")
+load("c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/monlthy_precipitation_1950_2000_By_station_obj")
 precip2=precip
-load("monlthy_precipitation_1950_2000_By_station_objB")
+load("c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/monlthy_precipitation_1950_2000_By_station_objB")
 precip2=rbind(precip2,precip)
-load("monlthy_precipitation_1950_2000_By_station_objC")
+load("c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/monlthy_precipitation_1950_2000_By_station_objC")
 precip2=rbind(precip2,precip)
-load("monlthy_precipitation_1950_2000_By_station_objD")
+load("c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/monlthy_precipitation_1950_2000_By_station_objD")
 precip2=rbind(precip2,precip)
-load("monlthy_precipitation_1950_2000_By_station_objE")
+load("c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/monlthy_precipitation_1950_2000_By_station_objE")
 precip2=rbind(precip2,precip)
-load("monlthy_precipitation_1950_2000_By_station_objF")
+load("c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/monlthy_precipitation_1950_2000_By_station_objF")
 precip2=rbind(precip2,precip)
-load("monlthy_precipitation_1950_2000_By_station_objG")
+load("c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/monlthy_precipitation_1950_2000_By_station_objG")
 precip2=rbind(precip2,precip)
 precip2=unique(precip2)
 precip3=cbind(precip2,rep(seq(1,5027,1),each=12))
@@ -73,14 +73,14 @@ colnames(pp3)=c("long","Lat","tp")
 ######################################################################
 coordinates(pp3) = ~long + Lat
 idw_annualPPT<-gstat::idw(tp ~ 1,locations=pp3,newdata=grd)
-raster_annualPPT<-raster(idw_annualPPT)/10
+raster_annualPPT<-raster(idw_annualPPT)
 save(raster_annualPPT,file="annual_total_rainfall_raster_current")
 
 #######################################################################
 #historic precipitation
-load('monlthy_precipitation_By_station_obj')
+load('c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/monlthy_precipitation_By_station_obj')
 precip2=precip
-load('monlthy_precipitation_By_station_obj_2')
+load('c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/monlthy_precipitation_By_station_obj_2')
 precip2=rbind(precip2,precip)
 precip2=unique(precip2)
 
@@ -118,23 +118,34 @@ rm(Tmin)
 Tmin2=as.data.frame(cbind(Tmin_o,rep(seq(1,dim(Tmin_o)[1]/12,1),each=12)))
 colnames(Tmin2)[5]="station"
 #Tmean=Tmean[-which(is.na(Tmean$tmean)),]
+T_minWinter=subset(Tmin2,month > 10 | month < 3)
+
 
 T2<-aggregate(tp  ~ station, data=Tmin2,FUN=mean,simplify=F)
+T2_winter<-aggregate(tp  ~ station, data=T_minWinter,FUN=mean,simplify=F)
 
 
 T3=as.data.frame(cbind(subset(Tmin_o,month==1)$long,
                     subset(Tmin_o,month==1)$Lat,
                     as.vector(unlist(T2$tp))/10))
-colnames(T3)=c("long","Lat","tmin")
+T3_winter=as.data.frame(cbind(subset(Tmin_o,month==1)$long,
+                  subset(Tmin_o,month==1)$Lat,
+                  as.vector(unlist(T2_winter$tp))/10))
 
+
+colnames(T3)=c("long","Lat","tmin")
+colnames(T3_winter)=c("long","Lat","tmin")
 
 
 coordinates(T3) = ~long + Lat
-
+coordinates(T3_winter) = ~long + Lat
 idw_Tmin_annual<-gstat::idw(tmin~1,locations=T3,newdata=grd)
-raster_Tmin_annual_H=raster(idw_Tmin_annual)
-save(raster_Tmin_annual_H,file="data/raster_Tmin_historic")
+idw_Tmin_winter<-gstat::idw(tmin~1,locations=T3_winter,newdata=grd)
 
+raster_Tmin_annual_H=raster(idw_Tmin_annual)
+raster_Tmin_winter_H=raster(idw_Tmin_winter)
+save(raster_Tmin_annual_H,file="data/raster_Tmin_historic")
+save(raster_Tmin_winter_H,file="data/raster_Tmin_winter_historic")
 
 ```
 
@@ -142,21 +153,29 @@ save(raster_Tmin_annual_H,file="data/raster_Tmin_historic")
 
 ```{R}
 #Interpolation Tmin 1950-2000 current
-load('monthly_Tmin_1950_2000_By_station_objB')
+load('c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Mesquite-distribution/Mesquite_distribution/monthly_Tmin_1950_2000_By_station_objB')
 Tmin2=as.data.frame(cbind(Tmin,rep(seq(1,dim(Tmin)[1]/12,1),each=12)))
 colnames(Tmin2)[5]="station"
 
-T2<-aggregate(tmin  ~ station, data=Tmin2,FUN=mean,simplify=F)
+T_minWinter=subset(Tmin2,month > 10 | month < 3)
 
+T2<-aggregate(tmin  ~ station, data=Tmin2,FUN=mean,simplify=F)
+T2_winter<-aggregate(tmin  ~ station, data=T_minWinter,FUN=mean,simplify=F)
 
 T3=as.data.frame(cbind(subset(Tmin,month==1)$long[-length(subset(Tmin,month==1)$long)],subset(Tmin,month==1)$Lat[-length(subset(Tmean,month==1)$Lat)],as.vector(unlist(T2$tmin))))
 
-colnames(T3)=c("long","Lat","tm")
+T3_winter=as.data.frame(cbind(subset(Tmin,month==1)$long,subset(Tmin,month==1)$Lat,as.vector(unlist(T2_winter$tmin))))
 
+colnames(T3)=c("long","Lat","tm")
+colnames(T3_winter)=c("long","Lat","tm")
 coordinates(T3)= ~long + Lat
+coordinates(T3_winter)= ~long + Lat
 idw_Tmin_annual<-gstat::idw(tm~1,locations=T3,newdata=grd)
+idw_Tmin_winter<-gstat::idw(tm~1,locations=T3_winter,newdata=grd)
 raster_Tmin_annual=raster(idw_Tmin_annual)
-save(raster_Tmin_annual,file="raster_Tmin_current")
+raster_Tmin_winter=raster(idw_Tmin_winter)
+save(raster_Tmin_annual,file="data/raster_Tmin_current")
+save(raster_Tmin_winter,file="data/raster_Tmin_winter_current")
 
 ```
 
