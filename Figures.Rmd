@@ -14,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #require(USAboundaries)
 require(raster)
+library(methods)
 USA_map_full<-maptools::readShapeSpatial("C:/Users/abaezaca/Dropbox (ASU)/Design Principles in CIS/maps_USA/tl_2017_us_state/tl_2017_us_state")
 top = 49.3457868 # north lat
 left = -124.7844079 # west long
@@ -27,8 +28,9 @@ rm(USA_map_full)
 
 Figure 1: past and current precence of _P. glandulosa_
 
-```{r}
-load("data/Prosopis_glandulosa_presence_data")#presence data
+```{r,cache=TRUE}
+#load("data/Prosopis_glandulosa_presence_data")#presence data
+prosopis_species_data <- readRDS("data/species_presence_data")
 load("data/PresencesNotUsed_obj")#presences_NotUsed
 require(raster)
 #load climate variables
@@ -39,17 +41,6 @@ predictors_future <- get_future_climate()
 predictors_future <- resample(predictors_future,predictors_present)
 ############################################################################
 
-llmespg_H<-cbind(mesquite_pg_clean$lon[which(mesquite_pg_clean$year<1950)], mesquite_pg_clean$lat[which(mesquite_pg_clean$year<1950)])
-presvals_pg_H<-as.data.frame(raster::extract(predictors_past, llmespg_H))
-
-presences_NotUsed_H=llmespg_H[-which(presvals_pg_H$mean_annual_temperature>0),]
-llmespg_H=llmespg_H[which(presvals_pg_H$mean_annual_temperature>0),]
-
-llmespg_C<-cbind(mesquite_pg_clean$lon[which(mesquite_pg_clean$year>1950)], mesquite_pg_clean$lat[which(mesquite_pg_clean$year>1950)])
-
-presvals_pg_C<-as.data.frame(raster::extract(predictors_past, llmespg_C))
-llmespg_C=llmespg_C[which(presvals_pg_C$mean_annual_temperature>0),]
-
 
 
 #llmespg_C<-llmespg_C[,-which(llmespg_C[,2]<0)]
@@ -59,19 +50,24 @@ png(filename = "output_maps/figure1.png",width = 26,height = 8,units = "cm",res 
 
 par(mfrow=c(1,2),mar=c(4,4,3,3))
 
+llmespg<-prosopis_species_data[which(prosopis_species_data$year<1950),1:2]
+#llmespg<-llmespg[,-which(llmespg[,2]<0)]
+presvals_pg<-as.data.frame(raster::extract(predictors_past, llmespg))
+llmespg<-llmespg[-which(is.na(presvals_pg$mean_annual_temperature)),]
 #maps::map("usa",fill = T,col="grey")
 #box(which = "plot")
-image(predictors_past[[2]],zlim=c(-17,30),  col ="white",  xlab = 'Longitude', ylab = 'Latitude',main="a. Presences before 1950")
+image(predictors_past[[2]],zlim=c(-17,30),  col ="white",  xlab = 'Longitude', ylab = 'Latitude',main="a. Presences of mesquite ensemble before 1950")
 plot(USA_map,add=T)
-points(llmespg_H[,1],llmespg_H[,2],col="darkorchid4",pch=20,cex=0.1)
-#legend(x=-120,y=54,legend = "a. Presences before 1950",col = "white",bty = "n",pch =20,cex=0.6)
+points(llmespg$lon,llmespg$lat,col="darkorchid4",pch=20,cex=0.4)
 
+llmespg<-prosopis_species_data[which(prosopis_species_data$year>1950),1:2]
+#llmespg<-llmespg[,-which(llmespg[,2]<0)]
+presvals_pg<-as.data.frame(raster::extract(predictors_past, llmespg))
+llmespg<-llmespg[-which(is.na(presvals_pg$mean_annual_temperature)),]
 
-#maps::map("usa",fill = T,col="grey")
-#box(which = "plot")
 image(predictors_past[[2]],zlim=c(-17,30),  col ="white",  xlab = 'Longitude', ylab = '',main="b. Presences after 1950")
 plot(USA_map,add=T)
-points(llmespg_C[,1],llmespg_C[,2],col="darkorchid4",pch=20,cex=0.1)
+points(llmespg$lon,llmespg$lat,col="darkorchid4",pch=20,cex=0.4)
 
 #legend(x=-120,y=54,legend = "b. Presences after 1950",col = "white",bty = "n",pch =20,cex=0.6)
 
@@ -124,14 +120,27 @@ dev.off()
 ```
 
 
+scale for figure 2
+```{R}
+
+png(filename = "Scale_Climate.png",width = 10,height = 10,units = "cm",res = 300)
+colfunc_R<-RColorBrewer::brewer.pal(9, "YlGn")
+colfunc_T<-rev(RColorBrewer::brewer.pal(9, "RdYlBu"))
+plot(rep(1,9),col=colfunc_R, pch=15,cex=4,bty="n",axes=F,ylab="            Rainfall    Temperature",xlab="",mar=c(0,4,2,2))
+points(rep(1.2,9),col=colfunc_T, pch=15,cex=4)
+text(x=1:9,y=rep(0.85,9),labels=c(0,2,4,6,8,10,12,14,"16<"),cex=0.8)
+text(x=1:9,y=rep(1.3,9),labels=c(-11,-5,0,5,10,15,20,25,"30<"),cex=0.8)
+
+dev.off()
+```
 
 
 Figure 3
 ```{R}
-Met="AllMethods"
-#maps_present<-estimation_present(estimation_method = Met)
+Met="GAM"
+maps_present<-estimation_present(estimation_method = Met)
 
-#maps_past<-estimation_past(estimation_method = Met)
+maps_past<-estimation_past(estimation_method = Met)
 
 maps<-combined_distribution()
 
@@ -147,22 +156,22 @@ png(filename = paste(paste("output_maps/",Met,sep = ""),"_Figure3.png"),
     res = 200)
 par(mfrow=c(2,3),cex=1.2)
 
-image(maps_past[[1]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="a.     P50")
+image(maps_past[[1]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="a)        PAST1950")
 plot(USA_map,add=T)
 
-image(maps_past[[2]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="b.     P2000")
+image(maps_past[[2]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="b)        PAST2000")
 plot(USA_map,add=T)
 
-image(maps_past[[3]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="c.     P2100")
+image(maps_past[[3]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="c)        PAST2100")
 plot(USA_map,add=T)
 
-image(maps_present[[1]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="d.     R2000")
+image(maps_present[[1]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="d)        RECENT2000")
 plot(USA_map,add=T)
 
-image(maps_present[[1]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="d.     R2000")
+image(maps_present[[1]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="d)        RECENT2000")
 plot(USA_map,add=T)
 
-image(maps_present[[2]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="e.     R2100")
+image(maps_present[[2]]>0.5,col=c("grey",RColorBrewer::brewer.pal(9, "YlOrRd")[9]),ylab="Latitude",xlab="Longitude",main="e)        RECENT2100")
 plot(USA_map,add=T)
 
 dev.off()
@@ -200,22 +209,28 @@ DiffP2100_P2000=(Diff_T2100P2000>0.5)+(DiffP2100_T2100>0.5)
 png(filename = paste(paste("output_maps/",Met,sep=""),"_figure4.png",sep=""),width = 60,height = 30,units = "cm",res = 200)
 par(mfrow=c(2,3),cex=1.2)
 
-image(Diff_T50T2000>0.5,col=c("grey","darkgreen"),ylab="Lat.",xlab="Long.",main="A)   Current [C]")
+image(Diff_T50T2000>0.5,col=c("grey","darkgreen"),ylab="Lat.",xlab="Long.",
+      main="a)          PAST2000 - PAST1950")
 plot(USA_map,add=T)
 
-image(Diff_P2000T2000>0,col=c("grey","yellow"),ylab="Lat.",xlab="Long.",main="B)    Current [LU]")
+image(Diff_P2000T2000>0,col=c("grey","yellow"),ylab="Lat.",xlab="Long.",
+      main="b)          PAST2000 - RECENT2000")
 plot(USA_map,add=T)
 
-image((DiffP2000_T50==1),col=c("grey","red"),ylab="Lat.",xlab="Long.",main="C)   Current [C + LU]")
+image((DiffP2000_T50==1),col=c("grey","red"),ylab="Lat.",xlab="Long.",
+      main="c)          RECENT2000 - PAST1950")
 plot(USA_map,add=T)
 
-image(Diff_T2100P2000>0.5,col=c("grey","darkgreen"),ylab="Lat.",xlab="Long.",main="D)   Future [C]")
+image(Diff_T2100P2000>0.5,col=c("grey","darkgreen"),ylab="Lat.",xlab="Long.",
+      main="d)          PAST2100 - RECENT2000")
 plot(USA_map,add=T)
 
-image(DiffP2100_T2100>0.5,col=c("grey","yellow"),ylab="Lat.",xlab="Long.",main="E)   Future [LU]")
+image(DiffP2100_T2100>0.5,col=c("grey","yellow"),ylab="Lat.",xlab="Long.",
+      main="e)          RECENT2100 - PAST2100")
 plot(USA_map,add=T)
 
-image((DiffP2100_P2000==1),col=c("grey","red"),ylab="Lat.",xlab="Long.",main="F)   Future [C + LU]")
+image((DiffP2100_P2000==1),col=c("grey","red"),ylab="Lat.",xlab="Long.",
+      main="f)          RECENT2100 - RECENT2000")
 plot(USA_map,add=T)
 dev.off()
 
@@ -251,8 +266,62 @@ rownames(area_perState)<-USA_map$NAME
 colnames(area_perState)=c("C_C","C_LU","C_C_LU","F_C","F_LU","F_C_LU")
 View(area_perState)
 write.csv(area_perState,file = "table_expansion_AreabyState.csv")
-#area_perState=read.csv("table_expansion_AreabyState.csv")
-#area_perState$X<-USA_map$NAME
+table_area<-read.csv("table_expansion_AreabyState.csv")
+table_areaRS<-reshape2::melt(table_area,id.vars = "X")
+
+options(scipen = 10000)
+
+Recent_Expansion <- ggplot(data=subset(table_areaRS,variable=="C_C" | variable=="C_LU" ),aes(x=reorder(X, -value),y=value,fill=variable))+
+  geom_bar(stat = "identity")+
+  scale_x_discrete("State")+
+  scale_y_continuous("Area [Km2]")+
+  scale_fill_manual("Factor",
+                    values = c("olivedrab4","darkgoldenrod1"),
+                    labels=c("Climate","Land-Use"),
+                    breaks=c("C_C","C_LU"))+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        panel.background = element_rect(fill = "white",
+                                colour = "white",
+                                size = 0.5, 
+                                linetype = "solid"),
+        panel.grid.major = element_line(size = 0.5, 
+                                  linetype = 'solid',
+                                  colour = "white"),
+        panel.grid.minor = element_line(size = 0.25, 
+                                  linetype = 'solid',
+                                  colour = "white")
+        )
+
+
+Future_Expansion <- ggplot(data=subset(table_areaRS,variable=="F_C" | variable=="F_LU" ),aes(x=reorder(X, -value),y=value,fill=variable))+
+  geom_bar(stat = "identity")+
+  scale_x_discrete("State")+
+  scale_y_continuous("Area [Km2]")+
+  scale_fill_manual("Factor",
+                    values = c("olivedrab4","darkgoldenrod1"),
+                    labels=c("Climate","Land-Use"),
+                    breaks=c("F_C","F_LU"))+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        panel.background = element_rect(fill = "white",
+                                colour = "white",
+                                size = 0.5, 
+                                linetype = "solid"),
+        panel.grid.major = element_line(size = 0.5, 
+                                  linetype = 'solid',
+                                  colour = "white"),
+        panel.grid.minor = element_line(size = 0.25, 
+                                  linetype = 'solid',
+                                  colour = "white")
+        )
+
+png(filename = "output_maps/Recent_Expansion.png",width = 20,height = 10,units = "cm",res=300)
+Recent_Expansion
+dev.off()
+
+png(filename = "output_maps/Future_Expansion.png",width = 20,height = 10,units = "cm",res=300)
+Future_Expansion
+dev.off()
+
 ```
 
 
@@ -261,7 +330,7 @@ write.csv(area_perState,file = "table_expansion_AreabyState.csv")
 # Calculate total area (in km2) for the predicted distributions T50, T2000, T2100, P2000, and P2100.
 
 ```{R}
-A=area(Diff_T50T2000)
+A=raster::area(Diff_T50T2000)
 
 P50_area= cellStats(A*(maps_past[[1]]>0),stat ="sum")
 

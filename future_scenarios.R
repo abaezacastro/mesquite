@@ -1,15 +1,16 @@
 
-R_fp_r <- stack("c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Modeling2/future_scenarios/Stats_pr.nc",varname="pr_pm")
+get_future_climate <- function(save_file =FALSE){
+R_fp_r <- stack("data/futureScenarios/Stats_pr.nc",varname="pr_pm")
                 
-T_fp_r <- stack("c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Modeling2/future_scenarios/Stats_tas.nc",varname="tas_pm")
+T_fp_r <- stack("data/futureScenarios/Stats_tas.nc",varname="tas_pm")
 
 
-T_min<-raster("c:/Users/abaezaca/Dropbox (ASU)/Mesquite/Modeling2/future_scenarios/Stats_tasmin.nc",varname="tasmin_pm")
+T_min<-raster("data/futureScenarios/Stats_tasmin.nc",varname="tasmin_pm")
 
 
 #Change Projection
 
-load("c:/Users/abaezaca/Documents/GitHub/mesquite/data/raster_Tmean_current")
+load("data/raster_Tmean_current")
 
 
 T_fp_r %>% rotate() %>% crop(y=raster_Tmean_annual)-> Tmean
@@ -26,7 +27,7 @@ rm(T_fp_r)
 rm(R_fp_r)
 rm(T_min)
 rm(raster_Tmean_annual)
-
-
+return(predictors_future)
+}
 
 

@@ -3,6 +3,9 @@ require(MASS)
 require(ncdf4)
 require(magrittr)
 
-maps_present<-estimation_present()
-
-maps_past<-estimation_past()
+source("Estimation.R")
+source("Estimation_past.R")
+source("future_scenarios.R")
+source("get_climate_scenarios.R")
+source("combined_distribution.R")
+#source("get_species_presence_function.R")

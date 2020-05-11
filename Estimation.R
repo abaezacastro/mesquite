@@ -93,7 +93,7 @@ rm(right)
 rm(bottom)
 ##############################################################################################################
 #evaluation
-  dist <- mask(dist,USA_map)
+  dist <- raster::mask(dist,USA_map)
   eval <- dismo::evaluate(p=llmespg[-traning,],a=backgr[bg_sam,],model = model,x=predictors_current)
 
   predictors_future <- get_future_climate()

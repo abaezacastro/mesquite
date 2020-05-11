@@ -11,7 +11,7 @@ get_past_climate <- function(){
   rclmat <- matrix(m, ncol=3, byrow=TRUE)
   # rm(m)
   
-  rc <- reclassify(PPT_m_H, rclmat)
+  rc <- raster::reclassify(PPT_m_H, rclmat)
   
   
   total_annual_rainfall=PPT_m_H*rc
@@ -95,7 +95,7 @@ get_future_climate <- function(save_file =FALSE){
   
   #Change Projection
   
-  load("c:/Users/abaezaca/Documents/GitHub/mesquite/data/raster_Tmean_current")
+  load("data/raster_Tmean_current")
   
   
   T_fp_r %>% rotate() %>% crop(y=raster_Tmean_annual)-> Tmean
